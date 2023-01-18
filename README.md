@@ -16,6 +16,7 @@ The Deepurify can be installed via pip (without dependencies). In case of pip, a
 Download the source code and running it via command.
 
 *NOTE*
+
 Download the necessary files for running Deepurify via https:\\
 Unzip this file and set an enviroment variable "DeepurifyInfoFiles" with
 ```
