@@ -5,6 +5,7 @@
 - **hmmer** v.3.3.1 (detecting conserved single-copy marker genes)
 - **prodigal** v 2.6.3 (ORF/CDS-prediction)
 - **CheckM** v 1.2.2 (evaluate the quality of MAGs)
+
   (**Please note**: For installing CheckM, installing the right version of **pplacer** is necessary. 
   
   Otherwise, CheckM may have ERROR during running. 
