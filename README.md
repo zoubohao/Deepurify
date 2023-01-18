@@ -1,30 +1,40 @@
 # Deepurify
- A tool to improve the quality of MAGs based on multi-modality deep learning model.
+ Deepurify is a tool to improve the quality of MAGs based on multi-modality deep learning model with GPUs.
 
 ## None-Python Dependencies:
-- hmmer v.3.3.1 (detecting conserved single-copy marker genes)
-- prodigal v 2.6.3 (ORF/CDS-prediction)
-- CheckM v 1.2.2 (evaluate the quality of MAGs)
-  (Please note: For installing CheckM, installing the right version of **pplacer** is necessary. Otherwise, CheckM may have ERROR during running. 
+- **hmmer** v.3.3.1 (detecting conserved single-copy marker genes)
+- **prodigal** v 2.6.3 (ORF/CDS-prediction)
+- **CheckM** v 1.2.2 (evaluate the quality of MAGs)
+  (**Please note**: For installing CheckM, installing the right version of **pplacer** is necessary. 
+  
+  Otherwise, CheckM may have ERROR during running. 
+
   The version that I installed is "v1.1.alpha19-0-g807f6f3".)
 
 ## Installtion:
 The Deepurify can be installed via pip (without dependencies). In case of pip, all dependencies listed above need to be installed seperately.
 
-*OR*
+```
+pip install Deepurify==1.0.0.3
+```
+
+**OR**
 
 Download the source code and running it via command.
 
-*NOTE*
+**NOTE**
 
 Download the necessary files for running Deepurify via https:\\
+
 Unzip this file and set an enviroment variable "DeepurifyInfoFiles" with
+
 ```
 export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 
 ## Usage of Deepurify
 You can use the Deepurify from the **clean** function.
+
 ```
 from Deepurify import clean
 
@@ -42,8 +52,11 @@ if __name__ == "__main__":
 
 *OR*
 
-You can use Deepurify from command:
+Move "deepurify" file from source code into the PATH of your enviroment.
+
+Then, you can use Deepurify from command:
+
 ```
-python Deepurify.py clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 2
+deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 2
 ```
 

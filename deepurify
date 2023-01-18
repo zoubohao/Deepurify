@@ -363,4 +363,4 @@ if __name__ == "__main__":
             for word, index in vocab.items():
                 wh.write(word+"\t"+str(index) + "\n")
     else:
-        raise ValueError("Do not implement other command.")
+        print("Do not implement other command. Please use 'deepurify clean -h' or 'deepurify build -h' for help.")
