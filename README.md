@@ -37,7 +37,7 @@ export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 You can use the Deepurify from the **clean** function.
 
 ```
-from Deepurify import clean
+from Deepurify.Deepurify import clean
 
 if __name__ == "__main__":
     input_mag_foler = "/path/to/your/mags/"
