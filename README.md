@@ -25,7 +25,7 @@ Download the source code and running it via command.
 
 **NOTE**
 
-Download the necessary files for running Deepurify via https:\\
+Download the necessary files for running Deepurify via https://drive.google.com/file/d/1i-qNfxVmxDXymTuVoTPuNFSB6VdKIYjb/view?usp=sharing
 
 Unzip this file and set an enviroment variable "DeepurifyInfoFiles" with
 
