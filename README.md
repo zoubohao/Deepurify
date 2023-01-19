@@ -1,5 +1,5 @@
 # Deepurify
- Deepurify is a tool to improve the quality of MAGs based on multi-modality deep learning model with GPUs.
+ Deepurify is a tool to improve the quality of MAGs based on multi-modality deep learning model with GPUs acceleration.
 
 ## None-Python Dependencies:
 - **hmmer** v.3.3.1 (detecting conserved single-copy marker genes)
