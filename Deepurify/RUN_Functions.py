@@ -327,7 +327,7 @@ def cleanMAGs(
         taxoTreePath (Union[str, None], optional): The path of taxonomic tree. (In InfoFiles folder) Defaults to None.
         taxoName2RepNormVecPath (Union[str, None], optional): The path of taxonomic lineage encoded vectors. (In InfoFiles folder) Defaults to None.
         hmmModelPath (Union[str, None], optional): The path of SCGs' hmm file. (In InfoFiles folder) Defaults to None.
-        model_config (Union[Dict, None], optional): The config of model.
+        model_config (Union[Dict, None], optional): The config of model. Defaults to None.
     """
 
     assert batch_size_per_gpu <= 20, "batch_size_per_gpu must smaller or equal with 20."
@@ -338,7 +338,7 @@ def cleanMAGs(
 
     filesFolder = os.path.split(input_bin_folder_path)[0]
     if temp_output_folder is None:
-        temp_output_folder = os.path.join(filesFolder, "TempOut")
+        temp_output_folder = os.path.join(filesFolder, "DeepurifyTempOut")
 
     if output_bins_meta_info_path is None:
         output_bins_meta_info_path = os.path.join(output_bin_folder_path, "MetaInfo.txt")
