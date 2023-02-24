@@ -24,19 +24,17 @@ pip install Deepurify==1.0.0.4
 2. Placing the 'deepurify' file to your enviromental PATH. 
 3. Then run it through 'deepurify' command. 
 
-## NOTE
+#### NOTE
 
 Download the necessary files for running Deepurify via https://drive.google.com/file/d/1i-qNfxVmxDXymTuVoTPuNFSB6VdKIYjb/view?usp=sharing
 
 Unzip this file and set an enviroment variable "DeepurifyInfoFiles" with
-
 ```
 export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 
 ## Usage of Deepurify
 You can use the Deepurify from the **cleanMAGs** function.
-
 ```
 from Deepurify.RUN_Functions import cleanMAGs
 
