@@ -75,7 +75,7 @@ if __name__ == "__main__":
         type=int)
     clean_parser.add_argument(
         "--num_worker",
-        default=2,
+        default=1,
         type=int,
         help="The number of workers in one GPU or CPU. The batch size would divide this value for per worker."
     )
