@@ -4,8 +4,8 @@ from Deepurify.RUN_Functions import cleanMAGs
 
 
 if __name__ == "__main__":
-    input_mag_folder = "../AllDataFFCCB/RealDataBinningModels/Concoct_Data/HLJ/fasta_bins/"
-    output_mag_folder = "..//AllDataFFCCB/RealDataBinningModels/Concoct_Data/HLJ/fasta_bins/DeepurifyBins/"
+    input_mag_folder = "/path/of/input/MAG/folder/"
+    output_mag_folder = "/path/of/output/cleanMAGs/folder/"
 
     cleanMAGs(
         input_bin_folder_path=input_mag_folder,
