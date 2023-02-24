@@ -7,9 +7,9 @@ from typing import Callable, Dict, List, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from Deepurify.IOUtils import getNumberOfPhylum, loadTaxonomyTree, readFasta, readPickle, readVocabulary, writeAnnotResult, writePickle
-from Deepurify.Model.EncoderModels import SequenceCLIP
-from Deepurify.SeqProcessTools.SequenceUtils import ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor
+from ..IOUtils import getNumberOfPhylum, loadTaxonomyTree, readFasta, readPickle, readVocabulary, writeAnnotResult, writePickle
+from ..Model.EncoderModels import SequenceCLIP
+from ..SeqProcessTools.SequenceUtils import ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor
 
 
 def buildTextsRepNormVector(taxo_tree: Dict, model: nn.Module, vocabulary: Dict[str, int], device: str, outputPath: str) -> Dict:

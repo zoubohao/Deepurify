@@ -9,8 +9,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from Deepurify.IOUtils import loadTaxonomyTree, readFile
-from Deepurify.SeqProcessTools.SequenceUtils import (
+from ..IOUtils import loadTaxonomyTree, readFile
+from ..SeqProcessTools.SequenceUtils import (
     ConvertSeqToImageTensorMoreFeatures,
     ConvertTextToIndexTensor,
     RandomlyReturnNegTaxoDiffPhy,

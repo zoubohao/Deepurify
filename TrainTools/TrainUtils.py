@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.tensorboard as tb
-from Deepurify.Model.Loss import cosineLoss
-from Deepurify.TrainTools.Scheduler import GradualWarmupScheduler
+from ..Model.Loss import cosineLoss
+from .Scheduler import GradualWarmupScheduler
 from torch.cuda.amp import autocast_mode, grad_scaler
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -218,9 +218,9 @@ def train(
                         lossSim = torch.sum(lossSimPair * simLossMask)
                     else:
                         if if_weight:
-                            lossSim = loss_func(batch_score, batch_pairLabels, batch_weights, loss_state) * 2.5
+                            lossSim = loss_func(batch_score, batch_pairLabels, batch_weights, loss_state) * 2.
                         else:
-                            lossSim = loss_func(batch_score, batch_pairLabels, None, loss_state) * 2.5
+                            lossSim = loss_func(batch_score, batch_pairLabels, None, loss_state) * 2.
                     lossPhy = loss_phy_func(batch_phyPred, b_phylabel.view(-1))
                     # cosine loss for constraining the texts label
                     if finetune:
@@ -242,7 +242,7 @@ def train(
                     ys = b_generateLabel.contiguous().view(-1)
                     c = batch_tokenProb.size(-1)
                     batch_tokenProb = batch_tokenProb.view(-1, c)
-                    lossTokens = loss_tokenProb_func(batch_tokenProb, ys) * 10.0
+                    lossTokens = loss_tokenProb_func(batch_tokenProb, ys)
                     loss += lossTokens
                 scaler.scale(loss).backward()
                 for para in model.module.parameters():

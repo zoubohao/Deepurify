@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from Deepurify.Model.Convolutions import Permute
+from .Convolutions import Permute
 
 
 class FeedForward(nn.Module):

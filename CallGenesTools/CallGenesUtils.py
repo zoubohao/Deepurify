@@ -3,7 +3,7 @@ from subprocess import Popen
 from multiprocessing import Process
 from typing import List
 
-from Deepurify.IOUtils import readFasta
+from ..IOUtils import readFasta
 
 
 def splitListEqually(input_list: List, num_parts: int) -> List[List[object]]:

@@ -1,12 +1,11 @@
 import math
 import os
-import pickle
 from copy import deepcopy
 from shutil import copyfile
 from typing import Callable, Dict, List, Tuple
 import numpy as np
 
-from Deepurify.IOUtils import readFasta, readVocabulary
+from ..IOUtils import readVocabulary
 
 
 def backTrace(curSelected: List, selection: List, res: set, k: int) -> None:
@@ -334,65 +333,65 @@ def sampleFromContigsAndWriteFiles(
                     break
 
 
-index2name = {
-    0: "Firmicutes@Negativicutes@Veillonellales",
-    1: "Candidatus-Saccharibacteria@Unclassified@Unclassified",
-    2: "Firmicutes@Negativicutes@Selenomonadales",
-}
+# index2name = {
+#     0: "Firmicutes@Negativicutes@Veillonellales",
+#     1: "Candidatus-Saccharibacteria@Unclassified@Unclassified",
+#     2: "Firmicutes@Negativicutes@Selenomonadales",
+# }
 
 
-def hMPBWriteFiles(fasta_file_path: str, label_file_path: str, out_path: str, max_data_length: int) -> None:
-    name2seq = readFasta(fasta_file_path)
-    name2label = {}
-    with open(label_file_path, "r") as rh:
-        for line in rh:
-            split_info = line.strip("\n").split("\t")
-            name2label[split_info[1]] = index2name[int(split_info[2])]
-    index = 0
-    for key, val in name2seq.items():
-        if len(val) <= max_data_length:
-            val = val
-        else:
-            val = val[0:max_data_length]
-        with open(os.path.join(out_path, str(index) + ".txt"), "w") as wh:
-            wh.write(val + "\t" + name2label[key] + "\n")
-        index += 1
+# def hMPBWriteFiles(fasta_file_path: str, label_file_path: str, out_path: str, max_data_length: int) -> None:
+#     name2seq = readFasta(fasta_file_path)
+#     name2label = {}
+#     with open(label_file_path, "r") as rh:
+#         for line in rh:
+#             split_info = line.strip("\n").split("\t")
+#             name2label[split_info[1]] = index2name[int(split_info[2])]
+#     index = 0
+#     for key, val in name2seq.items():
+#         if len(val) <= max_data_length:
+#             val = val
+#         else:
+#             val = val[0:max_data_length]
+#         with open(os.path.join(out_path, str(index) + ".txt"), "w") as wh:
+#             wh.write(val + "\t" + name2label[key] + "\n")
+#         index += 1
 
 
-if __name__ == "__main__":
-    print("Training")
-    sampleFromContigsAndWriteFiles(
-        "/home/datasets/ZBH/GenomesDataFilter_Total_Bigger15/",
-        "/home/datasets/ZBH/SmallerTrainingDataset/",
-        "/home/comp/21481598/GenomeSeqAnnotationOOD/TaxonomyInfo/ProGenomes_Bigger15/phy2count.txt",
-        min_data_length=1000,
-        max_data_length=256 * 256 * 256 * 256,
-        base_sample_times=1,
-        if_training=True,
-        smallPhyUpperBound=500,
-    )
-    print("Testing")  # We need to control the max length of testing part
-    sampleFromContigsAndWriteFiles(
-        "/home/datasets/ZBH/GenomesDataFilter_Total_Bigger15/",
-        "/home/datasets/ZBH/GenomesTestFilter_Bigger15/",
-        "/home/comp/21481598/GenomeSeqAnnotationOOD/TaxonomyInfo/ProGenomes_Bigger15/phy2count.txt",
-        min_data_length=1000,
-        max_data_length=256 * 256 * 256 * 256,
-        base_sample_times=1,
-        if_training=False,
-        smallPhyUpperBound=250,
-    )
-    sampleFromContigsAndWriteFiles("/home/datasets/ZBH/Mix/", "/home/datasets/ZBH/Unseen/", 1024 * 8 - 1, 100, if_training=False)
-    hMPBWriteFiles("./HMP_bin.fa", "./Index2ContigName.txt", "/home/datasets/ZBH/HMP/", 1024 * 8 - 1)
-    buildVocabularyAndAssignWeightByPhylum(
-        "/home/datasets/ZBH/GenomesDataFilter/",
-        "../TaxonomyInfo/ProGenomes/ProGenomesVocabulary.txt",
-        "../TaxonomyInfo/ProGenomes/ProGenomesSamples2Weight.txt",
-        if_weight=True,
-    )
-    tree = taxonomyTreeBuild(split_file_function, None, os.listdir("/home/datasets/ZBH/GenomesDataFilter/"))
-    wh = open("../TaxonomyInfo/ProGenomes/ProGenomesTaxonomyTree.pkl", "wb")
-    pickle.dump(tree, wh)
-    wh.close()
-    for child in tree["Children"]:
-        print(child["Name"])
+# if __name__ == "__main__":
+#     print("Training")
+#     sampleFromContigsAndWriteFiles(
+#         "/home/datasets/ZBH/GenomesDataFilter_Total_Bigger15/",
+#         "/home/datasets/ZBH/SmallerTrainingDataset/",
+#         "/home/comp/21481598/GenomeSeqAnnotationOOD/TaxonomyInfo/ProGenomes_Bigger15/phy2count.txt",
+#         min_data_length=1000,
+#         max_data_length=256 * 256 * 256 * 256,
+#         base_sample_times=1,
+#         if_training=True,
+#         smallPhyUpperBound=500,
+#     )
+#     print("Testing")  # We need to control the max length of testing part
+#     sampleFromContigsAndWriteFiles(
+#         "/home/datasets/ZBH/GenomesDataFilter_Total_Bigger15/",
+#         "/home/datasets/ZBH/GenomesTestFilter_Bigger15/",
+#         "/home/comp/21481598/GenomeSeqAnnotationOOD/TaxonomyInfo/ProGenomes_Bigger15/phy2count.txt",
+#         min_data_length=1000,
+#         max_data_length=256 * 256 * 256 * 256,
+#         base_sample_times=1,
+#         if_training=False,
+#         smallPhyUpperBound=250,
+#     )
+#     sampleFromContigsAndWriteFiles("/home/datasets/ZBH/Mix/", "/home/datasets/ZBH/Unseen/", 1024 * 8 - 1, 100, if_training=False)
+#     hMPBWriteFiles("./HMP_bin.fa", "./Index2ContigName.txt", "/home/datasets/ZBH/HMP/", 1024 * 8 - 1)
+#     buildVocabularyAndAssignWeightByPhylum(
+#         "/home/datasets/ZBH/GenomesDataFilter/",
+#         "../TaxonomyInfo/ProGenomes/ProGenomesVocabulary.txt",
+#         "../TaxonomyInfo/ProGenomes/ProGenomesSamples2Weight.txt",
+#         if_weight=True,
+#     )
+#     tree = taxonomyTreeBuild(split_file_function, None, os.listdir("/home/datasets/ZBH/GenomesDataFilter/"))
+#     wh = open("../TaxonomyInfo/ProGenomes/ProGenomesTaxonomyTree.pkl", "wb")
+#     pickle.dump(tree, wh)
+#     wh.close()
+#     for child in tree["Children"]:
+#         print(child["Name"])

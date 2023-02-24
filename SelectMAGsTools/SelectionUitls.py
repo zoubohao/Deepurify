@@ -4,7 +4,7 @@ from copy import deepcopy
 from shutil import copy
 from typing import Dict, List, Tuple
 
-from Deepurify.IOUtils import readBinName2Annot, readCheckMResultAndStat
+from ..IOUtils import readBinName2Annot, readCheckMResultAndStat
 
 index2Taxo = {1: "phylum_filter", 2: "class_filter", 3: "order_filter", 4: "family_filter", 5: "genus_filter", 6: "species_filter"}
 
@@ -32,16 +32,6 @@ def getScore(qualityValues: Tuple[float, float, str]) -> float:
     elif qualityValues[-1] == "MediumQuality":
         score += 100.0
     return score
-
-
-def traverse(tree: Tree, close: bool):
-    if close:
-        tree.canSelect = False
-    else:
-        print(tree.binName, tree.annotName, len(tree.childern), tree.qualityValues, tree.core, tree.canSelect)
-    if len(tree.childern) != 0:
-        for child in tree.childern:
-            traverse(child, close)
 
 
 def dfsBuildTree(tree: Tree, level: int, sevenFilteredChekcMList: List[Dict[str, Tuple[float, float, str]]], filterOutputFolder: str, binName: str):
@@ -123,6 +113,16 @@ def findLeafNode(node: Tree) -> Tree:
                 return findLeafNode(child)
 
 
+def traverse(tree: Tree, close: bool):
+    if close:
+        tree.canSelect = False
+    else:
+        print(tree.binName, tree.annotName, len(tree.childern), tree.qualityValues, tree.core, tree.canSelect)
+    if len(tree.childern) != 0:
+        for child in tree.childern:
+            traverse(child, close)
+
+
 def findBestBinsAfterFiltering(
     binFileName: str, inputFileFolder: str, deepurifyFolderPath: str, originalCheckMPath: str, outputPath: str
 ):
@@ -154,12 +154,22 @@ def findBestBinsAfterFiltering(
                 copy(os.path.join(deepurifyFolderPath, "FilterOutput", index2Taxo[level], treeNode.binName + suffix),
                      os.path.join(outputPath, outName))
     else:
-        coreLeaf = None
-        for child in root.childern:
-            if child.core[-1] is True:
-                coreLeaf = child
+        coreLeaf = findLeafNode(root)
+        if coreLeaf is None:
+            traverse(root, close=False)
+            raise ValueError("The leaf node is None.")
         curBinName = coreLeaf.binName
-        outName = curBinName + "_" + str(1) + suffix
+        outName = curBinName + "_" + str(6) + suffix
         outInfo.append((outName, coreLeaf.qualityValues, coreLeaf.annotName))
-        copy(os.path.join(deepurifyFolderPath, "FilterOutput", index2Taxo[1], coreLeaf.binName + suffix), os.path.join(outputPath, outName))
+        copy(os.path.join(deepurifyFolderPath, "FilterOutput", index2Taxo[6], coreLeaf.binName + suffix), os.path.join(outputPath, outName))
     return outInfo
+
+    #     coreLeaf = None
+    #     for child in root.childern:
+    #         if child.core[-1] is True:
+    #             coreLeaf = child
+    #     curBinName = coreLeaf.binName
+    #     outName = curBinName + "_" + str(1) + suffix
+    #     outInfo.append((outName, coreLeaf.qualityValues, coreLeaf.annotName))
+    #     copy(os.path.join(deepurifyFolderPath, "FilterOutput", index2Taxo[1], coreLeaf.binName + suffix), os.path.join(outputPath, outName))
+    # return outInfo

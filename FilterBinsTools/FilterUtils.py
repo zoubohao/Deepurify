@@ -5,9 +5,8 @@ from copy import deepcopy
 from multiprocessing import Process
 from typing import Dict, List, Set, Tuple
 
-from Deepurify.DataTools.DataUtils import readFasta
-from Deepurify.IOUtils import readAnnotResult, readHMMFile, writeAnnot2BinNames, writeFasta
-from Deepurify.LabelContigTools.LabelBinUtils import getBestMultiLabelsForFiltering
+from ..IOUtils import readAnnotResult, readHMMFile, writeAnnot2BinNames, writeFasta, readFasta
+from ..LabelContigTools.LabelBinUtils import getBestMultiLabelsForFiltering
 
 
 def summedLengthCal(name2seq: Dict[str, str]) -> int:
@@ -78,13 +77,11 @@ def splitContigs(
     # find the exist genes in those input contigs
     for contig in exist_contigs:
         if contig in contigName2_gene2num:
-
             curExistGenes2num = contigName2_gene2num[contig]
             existcontig2_gene2num[contig] = curExistGenes2num
             for gene, _ in curExistGenes2num.items():
                 if gene not in existGene2contigNames:
                     existGene2contigNames[gene] = gene2contigNames[gene]
-
     geneInfo = []
     for gene, contigList in existGene2contigNames.items():
         geneInfo.append((gene, contigList, len(set(contigList))))
@@ -167,10 +164,8 @@ def filterContaminationOneBin(
     for core in coreList:
         coreNames.append("@".join(core[1:]))
     gene2contigList, contigName2_gene2num = readHMMFile(hmmFilePath, ratio_cutoff, acc_cutoff)
-    # print("gene2contigList size", len(gene2contigList))
     filtedContigName2seq = {}
     annot2_contigName2seq = {}
-    ### If 80% of contigs are from core taxonomy at species level, we would reduce the coreNames ###
 
     def summedRecord(recordList):
         summedValue = 0.0
@@ -198,14 +193,13 @@ def filterContaminationOneBin(
                 if coreTaxo != newCoreNames[0]:
                     newCoreNames.append(coreTaxo)
             coreNames = deepcopy(newCoreNames)
-    ################################################################################
+
     for key, seq in contigName2seq.items():
         for coreName in coreNames:
             if coreName in contigName2annot[key]:
                 filtedContigName2seq[key] = seq
         if key not in filtedContigName2seq:
             curAnnot = "@".join(contigName2annot[key].split("@")[0:taxoLevel])
-            # print(curAnnot)
             if curAnnot not in annot2_contigName2seq:
                 newDict = dict()
                 newDict[key] = seq
@@ -213,6 +207,7 @@ def filterContaminationOneBin(
             else:
                 curDict = annot2_contigName2seq[curAnnot]
                 curDict[key] = seq
+
     # write files
     binName = os.path.split(binFastaPath)[-1]
     annot2binNames = {}
@@ -224,16 +219,14 @@ def filterContaminationOneBin(
     k = 0
     for coreName2seqFilter in filtedContigName2seqList:
         summedLength = summedLengthCal(coreName2seqFilter)
-        # print("core", coreNames[0], k, len(coreName2seqFilter), summedLength)
         if summedLength >= seq_length_threshold:
             annot2binNames[coreNames[0]].append(binNamePro + "_Core_" + str(k) + bin_suffix)
             writeFasta(coreName2seqFilter, os.path.join(outputFastaFolder, binNamePro + "_Core_" + str(k) + bin_suffix))
             k += 1
-    # Write the split bins from not the core taxonomy
+    # Write the split bins do not from the core taxonomy
     k = 0
     gene2contigList, contigName2_gene2num = readHMMFile(hmmFilePath, ratio_cutoff, acc_cutoff)
     for annot, noCoreContigName2seq in annot2_contigName2seq.items():
-        # print("Nocore", annot, k, summedLengthCal(noCoreContigName2seq))
         if summedLengthCal(noCoreContigName2seq) >= seq_length_threshold:
             if annot not in annot2binNames:
                 annot2binNames[annot] = [binNamePro + "_NoCore_" + str(k) + bin_suffix]
@@ -244,7 +237,6 @@ def filterContaminationOneBin(
         curFilteredList = splitContigs(noCoreContigName2seq, gene2contigList, contigName2_gene2num, 1, estimate_completeness_threshold)
         for noCoreName2seqFilter in curFilteredList:
             summedLength = summedLengthCal(noCoreName2seqFilter)
-            # print("summedlength", k, summedLength, seq_length_threshold)
             if summedLength >= seq_length_threshold:
                 if annot not in annot2binNames:
                     annot2binNames[annot] = [binNamePro + "_NoCore_" + str(k) + bin_suffix]

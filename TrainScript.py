@@ -10,17 +10,17 @@ from Deepurify.SeqProcessTools.SequenceDataset import SequenceSampledTestDataset
 from Deepurify.TrainTools.TrainUtils import test, train
 
 
-def train(fileConfig=None, modelConfig=None, trainingConfig=None):
+def config_train(fileConfig=None, modelConfig=None, trainingConfig=None):
     if fileConfig is None:
         fileConfig = {
-            "taxoVocabularyPath": "./TaxonomyInfo/ProGenomes/ProGenomesVocabulary.txt",
+            "taxoVocabularyPath": "./DeepurifyInfoFiles/ProGenomes/ProGenomesVocabulary.txt",
             "vocab3MerPath": "./3Mer_vocabulary.txt",
             "vocab4MerPath": "./4Mer_vocabulary.txt",
-            "trainPath": "/home/datasets/ZBH/SmallerTrainingDataset",
-            "testPath": "/home/datasets/ZBH/GenomesTestFilter_Bigger15",
-            "taxonomyTreePklPath": "./TaxonomyInfo/ProGenomes/ProGenomesTaxonomyTree.pkl",
-            "sampleWeightPath": "./TaxonomyInfo/ProGenomes/ProGenomesSamples2Weight.txt",
-            "gmmModel": "./PyObjs/contig_GMM.pkl",
+            "trainPath": "",
+            "testPath": "",
+            "taxonomyTreePklPath": "./DeepurifyInfoFiles/ProGenomes/ProGenomesTaxonomyTree.pkl",
+            "sampleWeightPath": "./DeepurifyInfoFiles/ProGenomes/ProGenomesSamples2Weight.txt",
+            "gmmModel": "./DeepurifyInfoFiles/PyObjs/contig_GMM.pkl",
         }
     if modelConfig is None:
         modelConfig = {
@@ -44,19 +44,19 @@ def train(fileConfig=None, modelConfig=None, trainingConfig=None):
             "if_weight": False,
             "epoch": 15,
             "batchSize": 16,
-            "weightSavePath": "/home/datasets/ZBH/TokenCheckpoint/",
-            "loadWeightPath": "/home/datasets/ZBH/TokenCheckpoint/samPair_0.780717.pth",
+            "weightSavePath": "./DeepurifyInfoFiles/CheckPoint/",
+            "loadWeightPath": None,
             "reguLambda": 5e-5,
             "learningRate": 1e-4,
             "multiplier": 1.5,
-            "warmEpoch": 1,
+            "warmEpoch": 2,
             "focal_gamma": 1.0,
             "maskedTokens": 40,
             "modelName": "SequenceCLIP",
             "device": "cuda:0",
             "loss_state": "sum",
             "finetune": True,
-            "finetune_absThre": 0.005,
+            "finetune_absThre": 0.05,
             "eval": False,
         }
     taxo_vocabulary = readVocabulary(fileConfig["taxoVocabularyPath"])
@@ -134,3 +134,8 @@ def train(fileConfig=None, modelConfig=None, trainingConfig=None):
             loss_func = nn.CrossEntropyLoss(reduction="none", label_smoothing=0.001)
         print("Start to Train.")
         train(trainingConfig, modelConfig, model, loss_func, trainingConfig["if_weight"], trainDataset, testDataset, innerThre, outerThre)
+
+
+if __name__ == "__main__":
+    torch.backends.cudnn.benchmark = True
+    config_train()
