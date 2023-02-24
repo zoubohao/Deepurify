@@ -35,7 +35,7 @@ export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 
 ## Usage of Deepurify
-You can use the Deepurify from the **clean** function.
+You can use the Deepurify from the **cleanMAGs** function.
 
 ```
 from Deepurify.RUN_Functions import cleanMAGs
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         )
 ```
 
-*OR*
+**OR**
 
 Download or Copy the code in 'deepurify' file in source codes ***AND*** adds into your enviroment PATH.
 
