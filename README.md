@@ -15,13 +15,8 @@ The Deepurify can be installed via pip (without dependencies).
 In case of pip, all dependencies listed above need to be installed seperately.
 
 ```
-pip install Deepurify==1.0.0.4
+pip install Deepurify==1.1.0.1
 ```
-
-**And**
-
-1. Download or Copy the code in 'deepurify' file in source codes.
-2. Placing the 'deepurify' file to your enviromental PATH folder. 
 
 #### NOTE
 
@@ -49,11 +44,7 @@ if __name__ == "__main__":
         )
 ```
 
-**OR**
-
-Download or Copy the code in 'deepurify' file in source codes ***AND*** Place the file in a enviroment PATH folder.
-
-Then, you can use Deepurify from command:
+**You can use Deepurify from command:
 ```
 deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_worker 1
 ```
