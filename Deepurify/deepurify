@@ -38,7 +38,7 @@ def build_taxo_vocabulary(weight_file_path: str) -> Dict[str, int]:
     return vocab_dict
 
 
-if __name__ == "__main__":
+def main():
     myparser = argparse.ArgumentParser(
         prog=os.path.basename(sys.argv[0]), description="Deepurify is a tool to improving the quality of MAGs by decontaminating."
     )
