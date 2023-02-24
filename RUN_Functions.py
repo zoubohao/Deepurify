@@ -1,18 +1,20 @@
 import os
 import subprocess
 import sys
-import torch
-from multiprocessing import Process
-
-from typing import List, Union
-from .IOUtils import getNumberOfPhylum, loadTaxonomyTree, readVocabulary
-
-from .LabelContigTools.LabelBinUtils import buildTextsRepNormVector, labelBinsFolder
-from .CallGenesTools.CallGenesUtils import callMarkerGenes
-from .FilterBinsTools.FilterUtils import filterContaminationFolder
-from .Model.EncoderModels import SequenceCLIP
-from .SelectMAGsTools.SelectionUitls import findBestBinsAfterFiltering
 import time
+from multiprocessing import Process, Queue
+from typing import Dict, List, Union
+
+import torch
+
+from Deepurify.CallGenesTools.CallGenesUtils import callMarkerGenes
+from Deepurify.FilterBinsTools.FilterUtils import filterContaminationFolder
+from Deepurify.IOUtils import (getNumberOfPhylum, loadTaxonomyTree,
+                               readVocabulary)
+from Deepurify.LabelContigTools.LabelBinUtils import (buildTextsRepNormVector,
+                                                      labelBinsFolder)
+from Deepurify.Model.EncoderModels import SequenceCLIP
+from Deepurify.SelectMAGsTools.SelectionUitls import findBestBinsAfterFiltering
 
 
 def runLabelFilterSplitBins(
@@ -42,9 +44,9 @@ def runLabelFilterSplitBins(
     num_cpus_per_checkm: int,
     dfsORgreedy: str,
     topK: int,
+    model_config: Dict
 ):
     print("Labeling taxonomic lineage for each contig in bins...")
-    print("\n")
     if os.path.exists(tempFileOutFolder) is False:
         os.mkdir(tempFileOutFolder)
     annotOutputFolder = os.path.join(tempFileOutFolder, "AnnotOutput")
@@ -56,36 +58,37 @@ def runLabelFilterSplitBins(
     wht = open(os.path.join(outputBinFolder, "time.txt"), "w")
     startTime = time.clock_gettime(0)
     if os.path.exists(taxoName2RepNormVecPath) is False:
-        modelConfig = {
-            "min_model_len": 1000,
-            "max_model_len": 1024 * 8,
-            "inChannel": 108,
-            "expand": 1.5,
-            "IRB_num": 3,
-            "head_num": 6,
-            "d_model": 738,
-            "num_GeqEncoder": 7,
-            "num_lstm_layers": 5,
-            "feature_dim": 1024,
-        }
+        if model_config is None:
+            model_config = {
+                "min_model_len": 1000,
+                "max_model_len": 1024 * 8,
+                "inChannel": 108,
+                "expand": 1.5,
+                "IRB_num": 3,
+                "head_num": 6,
+                "d_model": 738,
+                "num_GeqEncoder": 7,
+                "num_lstm_layers": 5,
+                "feature_dim": 1024,
+            }
         taxo_tree = loadTaxonomyTree(taxoTreePath)
         taxo_vocabulary = readVocabulary(taxoVocabPath)
         mer3_vocabulary = readVocabulary(mer3Path)
         mer4_vocabulary = readVocabulary(mer4Path)
         model = SequenceCLIP(
-            max_model_len=modelConfig["max_model_len"],
-            in_channels=modelConfig["inChannel"],
+            max_model_len=model_config["max_model_len"],
+            in_channels=model_config["inChannel"],
             taxo_dict_size=len(taxo_vocabulary),
             vocab_3Mer_size=len(mer3_vocabulary),
             vocab_4Mer_size=len(mer4_vocabulary),
             phylum_num=getNumberOfPhylum(taxo_tree),
-            head_num=modelConfig["head_num"],
-            d_model=modelConfig["d_model"],
-            num_GeqEncoder=modelConfig["num_GeqEncoder"],
-            num_lstm_layer=modelConfig["num_lstm_layers"],
-            IRB_layers=modelConfig["IRB_num"],
-            expand=modelConfig["expand"],
-            feature_dim=modelConfig["feature_dim"],
+            head_num=model_config["head_num"],
+            d_model=model_config["d_model"],
+            num_GeqEncoder=model_config["num_GeqEncoder"],
+            num_lstm_layer=model_config["num_lstm_layers"],
+            IRB_layers=model_config["IRB_num"],
+            expand=model_config["expand"],
+            feature_dim=model_config["feature_dim"],
             drop_connect_ratio=0.0,
             dropout=0.0,
         )
@@ -93,6 +96,7 @@ def runLabelFilterSplitBins(
         with torch.no_grad():
             buildTextsRepNormVector(taxo_tree, model, taxo_vocabulary, "cpu", taxoName2RepNormVecPath)
     processList = []
+    error_queue = Queue()
     if num_gpu == 0:
         binFilesList = os.listdir(inputBinFolder)
         totalNum = len(binFilesList)
@@ -113,7 +117,6 @@ def runLabelFilterSplitBins(
                         annotOutputFolder,
                         "cpu",
                         modelWeightPath,
-                        None,
                         mer3Path,
                         mer4Path,
                         taxoVocabPath,
@@ -128,12 +131,12 @@ def runLabelFilterSplitBins(
                         cutSeqLength,
                         dfsORgreedy,
                         topK,
+                        error_queue,
+                        model_config,
                     ),
                 )
             )
             processList[-1].start()
-        for p in processList:
-            p.join()
     else:
         assert sum(gpus_work_ratio) == 1.0
         for b in batch_size_per_gpu:
@@ -158,7 +161,6 @@ def runLabelFilterSplitBins(
                         annotOutputFolder,
                         gpus[i // num_worker],
                         modelWeightPath,
-                        None,
                         mer3Path,
                         mer4Path,
                         taxoVocabPath,
@@ -173,16 +175,32 @@ def runLabelFilterSplitBins(
                         cutSeqLength,
                         dfsORgreedy,
                         topK,
+                        error_queue,
+                        model_config,
                     ),
                 )
             )
             processList[-1].start()
-        for p in processList:
-            p.join()
-    for p in processList:
-        if p.exitcode != 0:
-            print("SOME ERROR DURING INFERENCE CONTIG LINEAGE WITH CPU OR GPU.")
-            sys.exit(1)
+
+    # error collection
+    queue_len = 0
+    n = len(processList)
+    while True:
+        if not error_queue.empty():
+            flag = error_queue.get()
+            queue_len += 1
+            if flag != None:
+                for p in processList:
+                    p.terminate()
+                    p.join()
+                print("\n")
+                print("SOME ERROR DURING INFERENCE CONTIG LINEAGE WITH CPU OR GPU.")
+                sys.exit(1)
+            if queue_len >= n:
+                for p in processList:
+                    p.join()
+                break
+
     filterOutputFolder = os.path.join(tempFileOutFolder, "FilterOutput")
     if os.path.exists(filterOutputFolder) is False:
         os.mkdir(filterOutputFolder)
@@ -277,6 +295,7 @@ def cleanMAGs(
     taxoTreePath: Union[str, None] = None,
     taxoName2RepNormVecPath: Union[str, None] = None,
     hmmModelPath: Union[str, None] = None,
+    model_config: Union[Dict, None] = None
 ):
     """
 
@@ -308,7 +327,11 @@ def cleanMAGs(
         taxoTreePath (Union[str, None], optional): The path of taxonomic tree. (In InfoFiles folder) Defaults to None.
         taxoName2RepNormVecPath (Union[str, None], optional): The path of taxonomic lineage encoded vectors. (In InfoFiles folder) Defaults to None.
         hmmModelPath (Union[str, None], optional): The path of SCGs' hmm file. (In InfoFiles folder) Defaults to None.
+        model_config (Union[Dict, None], optional): The config of model.
     """
+
+    assert batch_size_per_gpu <= 20, "batch_size_per_gpu must smaller or equal with 20."
+    assert num_worker <= 4, "num_worker must smaller or equal with 4."
 
     if "/" == input_bin_folder_path[-1]:
         input_bin_folder_path = input_bin_folder_path[0:-1]
@@ -328,15 +351,15 @@ def cleanMAGs(
     batch_size_per_gpu = [batch_size_per_gpu for _ in range(gpu_num)]
 
     if info_files_path is None:
-        info_files_path = os.environ["InfoFiles"]
+        info_files_path = os.environ["DeepurifyInfoFiles"]
     if modelWeightPath is None:
-        modelWeightPath = os.path.join(info_files_path, "CheckPoint", ".ckpt")
+        modelWeightPath = os.path.join(info_files_path, "CheckPoint", "Deepurify.ckpt")
     if taxoVocabPath is None:
         taxoVocabPath = os.path.join(info_files_path, "TaxonomyInfo",  "ProGenomesVocabulary.txt")
     if taxoTreePath is None:
         taxoTreePath = os.path.join(info_files_path, "TaxonomyInfo", "ProGenomesTaxonomyTree.pkl")
     if taxoName2RepNormVecPath is None:
-        taxoName2RepNormVecPath = os.path.join(info_files_path, "PyObjs", "_taxo_lineage_vector.pkl")
+        taxoName2RepNormVecPath = os.path.join(info_files_path, "PyObjs", "Deepurify_taxo_lineage_vector.pkl")
     if hmmModelPath is None:
         hmmModelPath = os.path.join(info_files_path, "HMM", "hmm_model.hmm")
     mer3Path = os.path.join(info_files_path, "3Mer_vocabulary.txt")
@@ -373,6 +396,7 @@ def cleanMAGs(
         num_cpus_per_checkm=num_cpus_per_checkm,
         dfsORgreedy=dfs_or_greedy,
         topK=topK,
+        model_config=model_config
     )
 
 

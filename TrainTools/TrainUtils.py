@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.tensorboard as tb
-from ..Model.Loss import cosineLoss
-from .Scheduler import GradualWarmupScheduler
+from Deepurify.Model.Loss import cosineLoss
+from Deepurify.TrainTools.Scheduler import GradualWarmupScheduler
 from torch.cuda.amp import autocast_mode, grad_scaler
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm

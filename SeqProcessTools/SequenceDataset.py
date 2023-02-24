@@ -1,25 +1,19 @@
-from math import floor
 import os
 import pickle
 import random
 from copy import deepcopy
+from math import floor
 from typing import Dict
 
 import numpy as np
 import torch
+from Deepurify.IOUtils import loadTaxonomyTree, readFile
+from Deepurify.SeqProcessTools.SequenceUtils import (
+    ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor,
+    RandomlyReturnNegTaxoDiffPhy, RandomReturnNegTaxoSamePhy,
+    SeqCutToModelLengthIntervalAndAddNoisy, maskAndPredict, maskSeq,
+    returnTaxoTextsInSameLevel)
 from torch.utils.data import Dataset
-
-from ..IOUtils import loadTaxonomyTree, readFile
-from ..SeqProcessTools.SequenceUtils import (
-    ConvertSeqToImageTensorMoreFeatures,
-    ConvertTextToIndexTensor,
-    RandomlyReturnNegTaxoDiffPhy,
-    RandomReturnNegTaxoSamePhy,
-    SeqCutToModelLengthIntervalAndAddNoisy,
-    maskSeq,
-    returnTaxoTextsInSameLevel,
-    maskAndPredict,
-)
 
 
 class SequenceTrainingDataset(Dataset):

@@ -1,9 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
-from .Convolutions import CompressConvolution, Permute
-from .FormerLayers import GseqformerEncoder
+from Deepurify.Model.Convolutions import CompressConvolution, Permute
+from Deepurify.Model.FormerLayers import GseqformerEncoder
 
 
 class VisionEncoder(nn.Module):

@@ -147,13 +147,13 @@ def buildSeqFeatures(seq: str, vocab_3Mer: Dict, vocab_4Mer: Dict) -> Tuple[List
     for i in range(seqLen):
         revIndex = seqLen - 1 - i
         if i + 3 <= seqLen:
-            mer3 = seq[i : i + 3]
+            mer3 = seq[i: i + 3]
             if mer3 in vocab_3Mer:
                 feature_3Mer.append(vocab_3Mer[mer3])
             else:
                 feature_3Mer.append(vocab_3Mer["[UNK]"])
         if i + 4 <= seqLen:
-            mer4 = seq[i : i + 4]
+            mer4 = seq[i: i + 4]
             if mer4 in vocab_4Mer:
                 feature_4Mer.append(vocab_4Mer[mer4])
             else:
@@ -163,23 +163,23 @@ def buildSeqFeatures(seq: str, vocab_3Mer: Dict, vocab_4Mer: Dict) -> Tuple[List
         else:
             reverse_complement.append("N")
         if i >= 3:
-            rev_mer3 = "".join(reverse_complement[i - 3 : i])
+            rev_mer3 = "".join(reverse_complement[i - 3: i])
             if rev_mer3 in vocab_3Mer:
                 feature_3Mer_rev_com.append(vocab_3Mer[rev_mer3])
             else:
                 feature_3Mer_rev_com.append(vocab_3Mer["[UNK]"])
         if i >= 4:
-            rev_mer4 = "".join(reverse_complement[i - 4 : i])
+            rev_mer4 = "".join(reverse_complement[i - 4: i])
             if rev_mer4 in vocab_4Mer:
                 feature_4Mer_rev_com.append(vocab_4Mer[rev_mer4])
             else:
                 feature_4Mer_rev_com.append(vocab_4Mer["[UNK]"])
-    rev_mer3 = "".join(reverse_complement[i - 2 : i + 1])
+    rev_mer3 = "".join(reverse_complement[i - 2: i + 1])
     if rev_mer3 in vocab_3Mer:
         feature_3Mer_rev_com.append(vocab_3Mer[rev_mer3])
     else:
         feature_3Mer_rev_com.append(vocab_3Mer["[UNK]"])
-    rev_mer4 = "".join(reverse_complement[i - 3 : i + 1])
+    rev_mer4 = "".join(reverse_complement[i - 3: i + 1])
     if rev_mer4 in vocab_4Mer:
         feature_4Mer_rev_com.append(vocab_4Mer[rev_mer4])
     else:
@@ -270,11 +270,11 @@ def SeqCutToModelLengthIntervalAndAddNoisy(seq: str, min_model_len: int, max_mod
     # For seq length bigger than maximum length
     if np.random.rand() <= 0.4:  # 0.4 probability to have max_model_len
         startIndex = np.random.randint(0, oriSeqLen - max_model_len)
-        cutSeq = seq[startIndex : startIndex + max_model_len]
+        cutSeq = seq[startIndex: startIndex + max_model_len]
         return cutSeq, 0
     if np.random.rand() <= 0.16666:  # 0.1 probability to have min_model_len
         startIndex = np.random.randint(0, oriSeqLen - min_model_len)
-        cutSeq = seq[startIndex : startIndex + min_model_len]
+        cutSeq = seq[startIndex: startIndex + min_model_len]
         randN = np.random.rand()
         if if_noisy is False:
             return cutSeq, 0
@@ -288,7 +288,7 @@ def SeqCutToModelLengthIntervalAndAddNoisy(seq: str, min_model_len: int, max_mod
     # 0.5 probability to have sampled length
     startIndex = np.random.randint(0, oriSeqLen - min_model_len)
     curLength = int(np.clip(gmmModel.sample(1)[0][0], min_model_len, max_model_len)[0])
-    cutSeq = seq[startIndex : startIndex + curLength]
+    cutSeq = seq[startIndex: startIndex + curLength]
     if if_noisy is False:
         return cutSeq, 0
     randN = np.random.rand()

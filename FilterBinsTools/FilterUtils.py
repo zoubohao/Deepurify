@@ -5,8 +5,10 @@ from copy import deepcopy
 from multiprocessing import Process
 from typing import Dict, List, Set, Tuple
 
-from ..IOUtils import readAnnotResult, readHMMFile, writeAnnot2BinNames, writeFasta, readFasta
-from ..LabelContigTools.LabelBinUtils import getBestMultiLabelsForFiltering
+from Deepurify.IOUtils import (readAnnotResult, readFasta, readHMMFile,
+                               writeAnnot2BinNames, writeFasta)
+from Deepurify.LabelContigTools.LabelBinUtils import \
+    getBestMultiLabelsForFiltering
 
 
 def summedLengthCal(name2seq: Dict[str, str]) -> int:

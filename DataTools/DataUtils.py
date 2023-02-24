@@ -3,9 +3,9 @@ import os
 from copy import deepcopy
 from shutil import copyfile
 from typing import Callable, Dict, List, Tuple
-import numpy as np
 
-from ..IOUtils import readVocabulary
+import numpy as np
+from Deepurify.IOUtils import readVocabulary
 
 
 def backTrace(curSelected: List, selection: List, res: set, k: int) -> None:

@@ -4,7 +4,7 @@ from copy import deepcopy
 from shutil import copy
 from typing import Dict, List, Tuple
 
-from ..IOUtils import readBinName2Annot, readCheckMResultAndStat
+from Deepurify.IOUtils import readBinName2Annot, readCheckMResultAndStat
 
 index2Taxo = {1: "phylum_filter", 2: "class_filter", 3: "order_filter", 4: "family_filter", 5: "genus_filter", 6: "species_filter"}
 

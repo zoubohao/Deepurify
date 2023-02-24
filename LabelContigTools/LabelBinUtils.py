@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
 from typing import Callable, Dict, List, Union
@@ -7,9 +8,12 @@ from typing import Callable, Dict, List, Union
 import numpy as np
 import torch
 import torch.nn as nn
-from ..IOUtils import getNumberOfPhylum, loadTaxonomyTree, readFasta, readPickle, readVocabulary, writeAnnotResult, writePickle
-from ..Model.EncoderModels import SequenceCLIP
-from ..SeqProcessTools.SequenceUtils import ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor
+from Deepurify.IOUtils import (getNumberOfPhylum, loadTaxonomyTree, readFasta,
+                               readPickle, readVocabulary, writeAnnotResult,
+                               writePickle)
+from Deepurify.Model.EncoderModels import SequenceCLIP
+from Deepurify.SeqProcessTools.SequenceUtils import (
+    ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor)
 
 
 def buildTextsRepNormVector(taxo_tree: Dict, model: nn.Module, vocabulary: Dict[str, int], device: str, outputPath: str) -> Dict:
@@ -520,18 +524,83 @@ def reverseLabeledResult(name2annotatRes: Dict[str, str], name2maxList: Dict[str
     return newRes, newMaxList
 
 
+def subProcessLabelGreedySearch(
+    inputVectorList: List[torch.Tensor],
+    names: List[str],
+    taxo_tree: Dict,
+    annotated_level: int,
+    text2repNormVector: Dict[str, torch.Tensor],
+    func: Callable,
+    logitNum: torch.Tensor,
+    phy_fc: nn.Module,
+):
+    name2res = {}
+    for i, inputVector in enumerate(inputVectorList):
+        curMaxList = []
+        with torch.no_grad():
+            anntotated_res = taxonomyLabelGreedySearch(
+                inputVector, "", taxo_tree, annotated_level, text2repNormVector, func, logitNum, curMaxList, phy_fc
+            )
+        name2res[names[i]] = (anntotated_res, curMaxList)
+    return name2res
+
+
+def subProcessLabelDFSSearch(
+    inputVectorList: List[torch.Tensor],
+    names: List[str],
+    taxo_tree: Dict,
+    text2repNormVector: Dict[str, torch.Tensor],
+    func: Callable,
+    logitNum: torch.Tensor,
+    phy_fc: nn.Module,
+    topK: int,
+):
+    name2res = {}
+    with torch.no_grad():
+        for i, inputVector in enumerate(inputVectorList):
+            result = []
+            taxonomyLabelDFSSearch(result, inputVector, "", taxo_tree, text2repNormVector, func, logitNum, phy_fc, topK, None, 1.0)
+            sortedRes = list(sorted(result, key=lambda x: x[2], reverse=True))
+            n = len(sortedRes)
+            k = n // 4 * 3
+            if k == 0:
+                k = n
+            result = sortedRes[0:k]
+            annotNames = []
+            annotTextNormTensors = []
+            annotProbs = []
+            annotScore = []
+            for pair in result:
+                annotNames.append(pair[0])
+                annotProbs.append(pair[1])
+                annotScore.append(pair[2])
+                annotTextNormTensors.append(pair[3])
+            inputVector = inputVector.unsqueeze(0)
+            visRepNorm = inputVector / inputVector.norm(dim=-1, keepdim=True)
+            textNorm = torch.stack(annotTextNormTensors, dim=0).unsqueeze(0)
+            innerSFT = torch.softmax(func(visRepNorm, textNorm, len(annotTextNormTensors)).squeeze(0) * logitNum, dim=-1)
+            if len(innerSFT.shape) >= 2:
+                innerSFT = innerSFT.squeeze(0)
+            annotScore = np.array(annotScore, dtype=np.float32)
+            annotScore = torch.softmax(torch.from_numpy(annotScore), dim=-1)
+            innerSFT = innerSFT + annotScore
+            innerMaxIndex = innerSFT.argmax()
+            name2res[names[i]] = (annotNames[innerMaxIndex], annotProbs[innerMaxIndex])
+    return name2res
+
+
 def labelBinFastaFile(
     binFasta: Union[str, Dict],
-    model_weight_path: str,
-    taxo_vocabulary_path: str,
-    vocab3MerPath: str,
-    vocab4MerPath: str,
-    taxo_tree_path: str,
-    taxoText2textRepNormPath: str,
-    device: str,
+    model,
+    mer3_vocabulary,
+    mer4_vocabulary,
+    taxo_tree,
+    text2repNormVector,
+    logitNum,
+    device,
+    model_config=None,
     batch_size=4,
     annotated_level=6,
-    modelConfig=None,
     num_cpu=6,
     overlapping_ratio=0.5,
     cutSeqLength=8192,
@@ -548,51 +617,9 @@ def labelBinFastaFile(
         name2seq = binFasta
     else:
         raise ValueError("binFasta is not a fasta file path and not is a dict that key is contig name value is seq.")
-    taxo_tree = loadTaxonomyTree(taxo_tree_path)
-    taxo_vocabulary = readVocabulary(taxo_vocabulary_path)
-    mer3_vocabulary = readVocabulary(vocab3MerPath)
-    mer4_vocabulary = readVocabulary(vocab4MerPath)
-    if modelConfig is None:
-        modelConfig = {
-            "min_model_len": 1000,
-            "max_model_len": 1024 * 8,
-            "inChannel": 108,
-            "expand": 1.5,
-            "IRB_num": 3,
-            "head_num": 6,
-            "d_model": 738,
-            "num_GeqEncoder": 7,
-            "num_lstm_layers": 5,
-            "feature_dim": 1024,
-        }
     # Split contig if longer than max_model_len,
     # Since we split the long contigs, than we need to reverse to the original
-    name2seq = splitLongContig(name2seq, max_model_len=cutSeqLength, min_model_len=modelConfig["min_model_len"], overlappingRatio=overlapping_ratio)
-    model = SequenceCLIP(
-        max_model_len=modelConfig["max_model_len"],
-        in_channels=modelConfig["inChannel"],
-        taxo_dict_size=len(taxo_vocabulary),
-        vocab_3Mer_size=len(mer3_vocabulary),
-        vocab_4Mer_size=len(mer4_vocabulary),
-        phylum_num=getNumberOfPhylum(taxo_tree),
-        head_num=modelConfig["head_num"],
-        d_model=modelConfig["d_model"],
-        num_GeqEncoder=modelConfig["num_GeqEncoder"],
-        num_lstm_layer=modelConfig["num_lstm_layers"],
-        IRB_layers=modelConfig["IRB_num"],
-        expand=modelConfig["expand"],
-        feature_dim=modelConfig["feature_dim"],
-        drop_connect_ratio=0.0,
-        dropout=0.0,
-    )
-    model.to(device)
-    ########### IMPORT ##########
-    state = torch.load(model_weight_path, map_location=torch.device(device))
-    model.load_state_dict(state, strict=True)
-    model.eval()
-    with torch.no_grad():
-        text2repNormVector = readPickle(taxoText2textRepNormPath)
-        logitNum = model.logit_scale.exp().cpu()
+    name2seq = splitLongContig(name2seq, max_model_len=cutSeqLength, min_model_len=model_config["min_model_len"], overlappingRatio=overlapping_ratio)
     names = []
     visRepVectorList = []
     batchList = []
@@ -601,7 +628,7 @@ def labelBinFastaFile(
     for i, (name, seq) in enumerate(name2seq.items()):
         with torch.no_grad():
             ori_rev_tensor, feature_3Mer, feature_3Mer_rev_com, feature_4Mer, feature_4Mer_rev_com = ConvertSeqToImageTensorMoreFeatures(
-                modelConfig["max_model_len"], seq, mer3_vocabulary, mer4_vocabulary
+                model_config["max_model_len"], seq, mer3_vocabulary, mer4_vocabulary
             )
             ori_rev_tensor = ori_rev_tensor.to(device)  # [C, L]
             feature_3Mer = feature_3Mer.to(device)  # [L]
@@ -682,81 +709,17 @@ def labelBinFastaFile(
     return reverseLabeledResult(name2Labeled, name2maxList, name2contigLen)
 
 
-def subProcessLabelGreedySearch(
-    inputVectorList: List[torch.Tensor],
-    names: List[str],
-    taxo_tree: Dict,
-    annotated_level: int,
-    text2repNormVector: Dict[str, torch.Tensor],
-    func: Callable,
-    logitNum: torch.Tensor,
-    phy_fc: nn.Module,
-):
-    name2res = {}
-    for i, inputVector in enumerate(inputVectorList):
-        curMaxList = []
-        with torch.no_grad():
-            anntotated_res = taxonomyLabelGreedySearch(
-                inputVector, "", taxo_tree, annotated_level, text2repNormVector, func, logitNum, curMaxList, phy_fc
-            )
-        name2res[names[i]] = (anntotated_res, curMaxList)
-    return name2res
-
-
-def subProcessLabelDFSSearch(
-    inputVectorList: List[torch.Tensor],
-    names: List[str],
-    taxo_tree: Dict,
-    text2repNormVector: Dict[str, torch.Tensor],
-    func: Callable,
-    logitNum: torch.Tensor,
-    phy_fc: nn.Module,
-    topK: int,
-):
-    name2res = {}
-    with torch.no_grad():
-        for i, inputVector in enumerate(inputVectorList):
-            result = []
-            taxonomyLabelDFSSearch(result, inputVector, "", taxo_tree, text2repNormVector, func, logitNum, phy_fc, topK, None, 1.0)
-            sortedRes = list(sorted(result, key=lambda x: x[2], reverse=True))
-            n = len(sortedRes)
-            k = n // 4 * 3
-            if k == 0:
-                k = n
-            result = sortedRes[0:k]
-            annotNames = []
-            annotTextNormTensors = []
-            annotProbs = []
-            annotScore = []
-            for pair in result:
-                annotNames.append(pair[0])
-                annotProbs.append(pair[1])
-                annotScore.append(pair[2])
-                annotTextNormTensors.append(pair[3])
-            inputVector = inputVector.unsqueeze(0)
-            visRepNorm = inputVector / inputVector.norm(dim=-1, keepdim=True)
-            textNorm = torch.stack(annotTextNormTensors, dim=0).unsqueeze(0)
-            innerSFT = torch.softmax(func(visRepNorm, textNorm, len(annotTextNormTensors)).squeeze(0) * logitNum, dim=-1)
-            if len(innerSFT.shape) >= 2:
-                innerSFT = innerSFT.squeeze(0)
-            annotScore = np.array(annotScore, dtype=np.float32)
-            annotScore = torch.softmax(torch.from_numpy(annotScore), dim=-1)
-            innerSFT = innerSFT + annotScore
-            innerMaxIndex = innerSFT.argmax()
-            name2res[names[i]] = (annotNames[innerMaxIndex], annotProbs[innerMaxIndex])
-    return name2res
-
-
 def labelONEBinAndWrite(
     inputPath: str,
     outputFolder: str,
-    device: str,
-    modelWeightPath: str,
-    mer3Path: str,
-    mer4Path: str,
-    taxoVocabPath: str,
-    taxoTreePath: str,
-    taxoName2RepNormVecPath: str,
+    model,
+    mer3_vocabulary,
+    mer4_vocabulary,
+    taxo_tree,
+    text2repNormVector,
+    logitNum,
+    device,
+    model_config=None,
     batch_size=6,
     annotated_level=6,
     num_cpu=6,
@@ -770,21 +733,22 @@ def labelONEBinAndWrite(
 ):
     name2annotated, name2maxList = labelBinFastaFile(
         inputPath,
-        modelWeightPath,
-        taxoVocabPath,
-        mer3Path,
-        mer4Path,
-        taxoTreePath,
-        taxoName2RepNormVecPath,
-        device=device,
+        model,
+        mer3_vocabulary,
+        mer4_vocabulary,
+        taxo_tree,
+        text2repNormVector,
+        logitNum,
+        device,
+        model_config,
         batch_size=batch_size,
         annotated_level=annotated_level,
         num_cpu=num_cpu,
+        overlapping_ratio=overlapping_ratio,
+        cutSeqLength=cutSeqLength,
         th=th,
         n=n,
         binName=binName,
-        overlapping_ratio=overlapping_ratio,
-        cutSeqLength=cutSeqLength,
         dfsORgreedy=dfsORgreedy,
         topK=topK,
     )
@@ -797,7 +761,6 @@ def labelBinsFolder(
     outputFolder: str,
     device: str,
     modelWeightPath: str,
-    oriCheckMPath: Union[None, str],
     mer3Path: str,
     mer4Path: str,
     taxoVocabPath: str,
@@ -812,35 +775,86 @@ def labelBinsFolder(
     cutSeqLength=8192,
     dfsORgreedy="dfs",
     topK=3,
+    error_queue=None,
+    model_config=None,
 ):
-    assert bin_suffix.lower() != "txt" or bin_suffix.lower() != ".txt"
-    files = os.listdir(inputBinFolder)
-    if filesList is not None:
-        files = filesList
-    num_files = len(files)
-    for i, file in enumerate(files):
-        if os.path.splitext(file)[-1][1:] == bin_suffix:
-            binName = os.path.splitext(file)[0]
-            if os.path.exists(os.path.join(outputFolder, binName + ".txt")):
-                continue
-            labelONEBinAndWrite(
-                os.path.join(inputBinFolder, file),
-                outputFolder,
-                device,
-                modelWeightPath,
-                mer3Path,
-                mer4Path,
-                taxoVocabPath,
-                taxoTreePath,
-                taxoName2RepNormVecPath,
-                batch_size,
-                annotated_level,
-                num_cpu,
-                overlapping_ratio,
-                cutSeqLength,
-                i,
-                num_files,
-                binName,
-                dfsORgreedy,
-                topK,
-            )
+    try:
+        assert bin_suffix.lower() != "txt" or bin_suffix.lower() != ".txt"
+        files = os.listdir(inputBinFolder)
+        if filesList is not None:
+            files = filesList
+        num_files = len(files)
+        taxo_tree = loadTaxonomyTree(taxoTreePath)
+        taxo_vocabulary = readVocabulary(taxoVocabPath)
+        mer3_vocabulary = readVocabulary(mer3Path)
+        mer4_vocabulary = readVocabulary(mer4Path)
+        if model_config is None:
+            model_config = {
+                "min_model_len": 1000,
+                "max_model_len": 1024 * 8,
+                "inChannel": 108,
+                "expand": 1.5,
+                "IRB_num": 3,
+                "head_num": 6,
+                "d_model": 738,
+                "num_GeqEncoder": 7,
+                "num_lstm_layers": 5,
+                "feature_dim": 1024,
+            }
+        model = SequenceCLIP(
+            max_model_len=model_config["max_model_len"],
+            in_channels=model_config["inChannel"],
+            taxo_dict_size=len(taxo_vocabulary),
+            vocab_3Mer_size=len(mer3_vocabulary),
+            vocab_4Mer_size=len(mer4_vocabulary),
+            phylum_num=getNumberOfPhylum(taxo_tree),
+            head_num=model_config["head_num"],
+            d_model=model_config["d_model"],
+            num_GeqEncoder=model_config["num_GeqEncoder"],
+            num_lstm_layer=model_config["num_lstm_layers"],
+            IRB_layers=model_config["IRB_num"],
+            expand=model_config["expand"],
+            feature_dim=model_config["feature_dim"],
+            drop_connect_ratio=0.0,
+            dropout=0.0,
+        )
+        model.to(device)
+        ########### IMPORT ##########
+        state = torch.load(modelWeightPath, map_location=torch.device(device))
+        model.load_state_dict(state, strict=True)
+        model.eval()
+        with torch.no_grad():
+            text2repNormVector = readPickle(taxoName2RepNormVecPath)
+            logitNum = model.logit_scale.exp().cpu()
+        for i, file in enumerate(files):
+            if os.path.splitext(file)[-1][1:] == bin_suffix:
+                binName = os.path.splitext(file)[0]
+                if os.path.exists(os.path.join(outputFolder, binName + ".txt")):
+                    continue
+                labelONEBinAndWrite(
+                    os.path.join(inputBinFolder, file),
+                    outputFolder,
+                    model,
+                    mer3_vocabulary,
+                    mer4_vocabulary,
+                    taxo_tree,
+                    text2repNormVector,
+                    logitNum,
+                    device,
+                    model_config,
+                    batch_size,
+                    annotated_level,
+                    num_cpu,
+                    overlapping_ratio,
+                    cutSeqLength,
+                    i,
+                    num_files,
+                    binName,
+                    dfsORgreedy,
+                    topK,
+                )
+        error_queue.put(None)
+    except:
+        traceback.print_exc()
+        error_queue.put(1)
+        sys.exit(1)

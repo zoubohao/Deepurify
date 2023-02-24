@@ -1,9 +1,9 @@
 import os
-from subprocess import Popen
 from multiprocessing import Process
+from subprocess import Popen
 from typing import List
 
-from ..IOUtils import readFasta
+from Deepurify.IOUtils import readFasta
 
 
 def splitListEqually(input_list: List, num_parts: int) -> List[List[object]]:

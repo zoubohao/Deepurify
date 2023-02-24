@@ -3,8 +3,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from .Convolutions import Permute
+from Deepurify.Model.Convolutions import Permute
 
 
 class FeedForward(nn.Module):
