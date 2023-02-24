@@ -28,7 +28,7 @@ export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 
 ## Usage of Deepurify
-You can use the Deepurify from the **cleanMAGs** function.
+1. You can use the Deepurify from the **cleanMAGs** function.
 ```
 from Deepurify.RUN_Functions import cleanMAGs
 
@@ -44,7 +44,8 @@ if __name__ == "__main__":
         )
 ```
 
-You can use Deepurify from command:
+
+2. You can use Deepurify from command:
 ```
 deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_worker 1
 ```
