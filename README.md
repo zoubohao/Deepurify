@@ -45,7 +45,7 @@ if __name__ == "__main__":
         output_bin_folder_path = output_mag_folder,
         bin_suffix = "fa",
         gpu_num = 1, ## it can set 0 to use CPU, but it is much slower.
-        num_worker = 4 
+        num_worker = 1 
         )
 ```
 
@@ -55,6 +55,6 @@ Download or Copy the code in 'deepurify' file in source codes ***AND*** Place th
 
 Then, you can use Deepurify from command:
 ```
-deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 2
+deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_worker 1
 ```
 
