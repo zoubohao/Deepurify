@@ -44,7 +44,7 @@ if __name__ == "__main__":
         )
 ```
 
-**You can use Deepurify from command:
+You can use Deepurify from command:
 ```
 deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_worker 1
 ```
