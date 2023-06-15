@@ -59,11 +59,11 @@ class VisionEncoder(nn.Module):
     def save_gradient(self, grad):
         self.gradient = grad.clone().detach().cpu()
 
-    def get(self):
-        self.feature_cam = self.feature_cam.clone().detach().cpu()
+    def get_cam(self):
+        self.feature_cam = self.feature_cam
         if self.gradient is None:
             raise "The gradient is None."
-        return self.feature_cam, self.gradient, self.outAtten.clone().detach().cpu()
+        return self.feature_cam, self.gradient, self.outAtten
 
     def forward_features(self, x, selectMask=None):
         x64, x32, x16, x8 = self.compressConv(x)  # B, C, L
@@ -77,7 +77,6 @@ class VisionEncoder(nn.Module):
         conv32_64 = self.conv32_64(branchX32)
         rawGateScore = eX64 + conv32_64
         gateScore = torch.softmax(torch.mean(rawGateScore, dim=1, keepdim=True), dim=-1)  # B, 1, L
-        self.outAtten = gateScore
         eX64 = eX64 * gateScore
         orieX64 = torch.clone(rawGateScore)  # B, C, L
         b, c, l = orieX64.shape
@@ -86,7 +85,8 @@ class VisionEncoder(nn.Module):
             if self.handle is None:
                 print("######### Inject Hook #########")
                 self.handle = eX64.register_hook(self.save_gradient)
-            self.feature_cam = eX64
+            self.feature_cam = eX64.clone().detach().cpu()
+            self.outAtten = gateScore.clone().detach().cpu()
             
         eX64 = torch.sum(eX64, dim=-1)
         if selectMask is None:
