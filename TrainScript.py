@@ -76,6 +76,7 @@ def config_train(fileConfig=None, modelConfig=None, trainingConfig=None):
         misMatchNum=trainingConfig["misMatchNum"],
         gmmModelPath=fileConfig["gmmModel"],
         finetune=trainingConfig["finetune"],
+        maskedLength=trainingConfig["maskedTokens"]
     )
     # Test
     testDataset = SequenceSampledTestDataset(

@@ -103,7 +103,7 @@ class VisionEncoder(nn.Module):
     def forward(self, x, selectMask=None):
         """
         :param x: [B, C, L] B: batch size,
-        :return: [B, feature_num] or ([B, feature_num], [B, SelectedTokens, feature_num])
+        :return: [B, feature_num] or ([B, feature_num], [B, feature_num, SelectedTokens])
         """
         rep = self.forward_features(x, selectMask)
         return rep
@@ -240,9 +240,8 @@ class SequenceCLIP(nn.Module):
             pairTextTensor = text_features_norm[3 * b:]
             pairTextTensor = pairTextTensor.view([b, num_labels, -1])
 
-            # print("token shape", tokens.shape)
             tokenProb = self.tokenFC(tokens.permute([0, 2, 1]))
-            # print("token prob shape", tokenProb.shape)
+
             # return the result
             return (
                 self.gatherValues(image_features_norm, pairTextTensor, num_labels) * logit_scale,
