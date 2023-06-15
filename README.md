@@ -1,4 +1,4 @@
-# Deepurify
+# Deepurify_Project
   **Paper: Deepurfy: metagenome-assembled genomes contamination removal using deep language model.**
   
   Deepurify is a tool for improving the quality of MAGs by filtering contaminated contigs using a multi-modality deep language model that can be accelerated by GPUs.
