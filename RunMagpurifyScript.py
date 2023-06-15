@@ -4,7 +4,6 @@ from shutil import copy
 import subprocess
 import argparse
 
-
 def runCheckM(binsFolder: str, checkmResFilePath: str, num_cpu: int, bin_suffix: str):
     res = subprocess.Popen(" checkm lineage_wf " + " -t " + str(num_cpu) + " --pplacer_threads " + str(num_cpu) +
                            " -x " + bin_suffix + " -f " + checkmResFilePath + " -r " +
