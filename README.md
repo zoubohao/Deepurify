@@ -34,18 +34,25 @@ export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ## Usage of Deepurify
 1). You can use the Deepurify from the **cleanMAGs** function.
 ```
-from Deepurify.RUN_Functions import cleanMAGs
-
+from Deepurify.clean_func import cleanMAGs
 if __name__ == "__main__":
-    input_mag_foler = "/path/to/your/mags/"
-    output_mag_foler = "/path/to/your/output/"
+    inputBinFolderPath = "/path/of/bins/folder/"
+    outputBinFolderPath = "/path/of/output/folder"
+    
     cleanMAGs(
-        input_bin_folder_path = input_mag_foler,
-        output_bin_folder_path = output_mag_folder,
-        bin_suffix = "fa",
-        gpu_num = 1, ## it can set 0 to use CPU, but it is much slower.
-        num_worker = 1 
-        )
+        input_bin_folder_path=inputBinFolderPath,
+        output_bin_folder_path=outputBinFolderPath,
+        # setting of contig inference stage 
+        bin_suffix="fa",
+        gpu_num=2,
+        batch_size_per_gpu=20,
+        num_threads_per_device=2,
+        # setting of call gene stage
+        num_threads_call_genes=64,
+        # setting of running checkm stage
+        checkM_process_num=3,
+        num_threads_per_checkm=22
+    )
 ```
 
 
