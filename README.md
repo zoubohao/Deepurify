@@ -37,7 +37,7 @@ export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 from Deepurify.clean_func import cleanMAGs
 if __name__ == "__main__":
     inputBinFolderPath = "/path/of/bins/folder/"
-    outputBinFolderPath = "/path/of/output/folder"
+    outputBinFolderPath = "/path/of/output/folder/"
     
     cleanMAGs(
         input_bin_folder_path=inputBinFolderPath,
