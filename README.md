@@ -19,7 +19,7 @@ The Deepurify can be installed via pip (without dependencies).
 In case of pip, all dependencies listed above need to be installed seperately.
 
 ```
-pip install Deepurify==1.1.0.4
+pip install Deepurify==1.2.0
 ```
 
 ## Download Files for Running
