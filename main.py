@@ -2,8 +2,8 @@ from Deepurify.clean_func import cleanMAGs
 
 
 if __name__ == "__main__":
-    inputBinFolderPath = "/root/Deepurify_Data/RealDataBinningModels/Concoct_Data/CAMI/high/fasta_bins/"
-    outputBinFolderPath = "/root/Deepurify_Data/RealDataBinningModels/Concoct_Data/test_concoct_cami_high/"
+    inputBinFolderPath = "/path/of/bins/folder/"
+    outputBinFolderPath = "/path/of/output/folder/"
     
     cleanMAGs(
         input_bin_folder_path=inputBinFolderPath,
@@ -19,6 +19,6 @@ if __name__ == "__main__":
         checkM_process_num=2,
         num_threads_per_checkm=22,
         # others
-        temp_output_folder="/root/Deepurify_Data/RealDataBinningModels/Concoct_Data/DeepTempFiles/",
+        temp_output_folder="/path/of/output/folder/DeepTempFiles/",
         self_evaluate=False,
     )
