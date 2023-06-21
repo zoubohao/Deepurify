@@ -95,7 +95,8 @@ def cleanMAGs(
         The contig is assigned a label based on the top-k most relevant or similar taxonomic lineages. 
         The specific number of lineages considered for labeling can be determined by the value of k.
 
-        topK_num (int, optional): During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the highest cosine similarity with the contig's encoded vector. 
+        topK_num (int, optional): During the top-k searching approach, the default behavior is to search for the top-k taxon nodes that exhibit the highest cosine 
+        similarity with the contig's encoded vector. 
         By default, the value of k is set to 3, meaning that the three most similar nodes in terms of cosine similarity will be considered for labeling the contig. 
         Please note that this parameter does not have any effect when using the greedy search approach (topK_num=1).
 
