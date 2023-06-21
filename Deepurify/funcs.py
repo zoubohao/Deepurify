@@ -19,6 +19,9 @@ from Deepurify.SelectMAGsTools.SelectionUitls import findBestBinsAfterFiltering
 from Deepurify.CallGenesTools.CallGenesUtils import splitListEqually
 
 
+index2Taxo = {1: "T1_filter", 2: "T2_filter", 3: "T3_filter", 4: "T4_filter", 5: "T5_filter", 6: "T6_filter"}
+
+
 def runLabelFilterSplitBins(
     inputBinFolder: str,
     tempFileOutFolder: str,
@@ -34,22 +37,22 @@ def runLabelFilterSplitBins(
     mer4Path: str,
     gpus_work_ratio: List[float],
     batch_size_per_gpu: List[float],
-    num_worker_per_device: int,
+    num_threads_per_device: int,
     overlapping_ratio: float,
     cutSeqLength: int,
-    num_cpus_call_genes: int,
+    num_threads_call_genes: int,
     ratio_cutoff: float,
     acc_cutoff: float,
     estimated_completeness_threshold: float,
     seq_length_threshold: int,
-    checkM_parallel_num: int,
-    num_cpus_per_checkm: int,
-    dfsORgreedy: str,
+    checkM_process_num: int,
+    num_threads_per_checkm: int,
+    topkORgreedy: str,
     topK: int,
     model_config: Dict,
-    stop_at_step2=False
+    self_evaluate=False
 ):
-    print("Labeling taxonomic lineage for each contig in bins...")
+    print("Estimating Taxonomic Similarity by Labeling Lineage for Each Contig in the MAG.")
     print()
     if os.path.exists(tempFileOutFolder) is False:
         os.mkdir(tempFileOutFolder)
@@ -96,7 +99,7 @@ def runLabelFilterSplitBins(
             drop_connect_ratio=0.0,
             dropout=0.0,
         )
-        print("DO NOT FIND taxoName2RepNormVecPath FILE. Start to build taxoName2RepNormVecPath file. ")
+        print("Warning, DO NOT FIND taxoName2RepNormVecPath FILE. Start to build taxoName2RepNormVecPath file. ")
         state = torch.load(modelWeightPath, map_location="cpu")
         model.load_state_dict(state, strict=True)
         with torch.no_grad():
@@ -107,9 +110,9 @@ def runLabelFilterSplitBins(
         binFilesList = os.listdir(inputBinFolder)
         totalNum = len(binFilesList)
         nextIndex = 0
-        for i in range(num_worker_per_device):
-            if i != (num_worker_per_device) - 1:
-                cutFileLength = totalNum // num_worker_per_device + 1
+        for i in range(num_threads_per_device):
+            if i != (num_threads_per_device) - 1:
+                cutFileLength = totalNum // num_threads_per_device + 1
                 curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
                 nextIndex += cutFileLength
             else:
@@ -127,14 +130,14 @@ def runLabelFilterSplitBins(
                         taxoVocabPath,
                         taxoTreePath,
                         taxoName2RepNormVecPath,
-                        8,
+                        2,
                         6,
                         bin_suffix,
                         curDataFilesList,
                         2,
                         overlapping_ratio,
                         cutSeqLength,
-                        dfsORgreedy,
+                        topkORgreedy,
                         topK,
                         error_queue,
                         model_config,
@@ -146,15 +149,14 @@ def runLabelFilterSplitBins(
     else:
         assert sum(gpus_work_ratio) == 1.0
         for b in batch_size_per_gpu:
-            assert b % num_worker_per_device == 0, "The batch size number in batch_size_per_gpu can not divide num_worker_per_device."
+            assert b % num_threads_per_device == 0, f"The batch size number: {b} in batch_size_per_gpu can not divide num_threads_per_device: {num_threads_per_device}."
         gpus = ["cuda:" + str(i) for i in range(num_gpu)]
         binFilesList = os.listdir(inputBinFolder)
         totalNum = len(binFilesList)
         nextIndex = 0
-        for i in range(num_gpu * num_worker_per_device):
-            if i != (num_gpu * num_worker_per_device) - 1:
-                cutFileLength = int(totalNum * gpus_work_ratio[i //
-                                    num_worker_per_device] / num_worker_per_device + 0.0) + 1
+        for i in range(num_gpu * num_threads_per_device):
+            if i != (num_gpu * num_threads_per_device) - 1:
+                cutFileLength = int(totalNum * gpus_work_ratio[i // num_threads_per_device] / num_threads_per_device + 0.0) + 1
                 curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
                 nextIndex += cutFileLength
             else:
@@ -165,21 +167,21 @@ def runLabelFilterSplitBins(
                     args=(
                         inputBinFolder,
                         annotOutputFolder,
-                        gpus[i // num_worker_per_device],
+                        gpus[i // num_threads_per_device],
                         modelWeightPath,
                         mer3Path,
                         mer4Path,
                         taxoVocabPath,
                         taxoTreePath,
                         taxoName2RepNormVecPath,
-                        batch_size_per_gpu[i // num_worker_per_device] // num_worker_per_device,
+                        batch_size_per_gpu[i // num_threads_per_device] // num_threads_per_device,
                         6,
                         bin_suffix,
                         curDataFilesList,
                         2,
                         overlapping_ratio,
                         cutSeqLength,
-                        dfsORgreedy,
+                        topkORgreedy,
                         topK,
                         error_queue,
                         model_config,
@@ -187,7 +189,7 @@ def runLabelFilterSplitBins(
                 )
             )
             print("Processer {} has {} files in device {} .".format(
-                i, len(curDataFilesList), gpus[i // num_worker_per_device]))
+                i, len(curDataFilesList), gpus[i // num_threads_per_device]))
             processList[-1].start()
 
     # error collection
@@ -219,10 +221,15 @@ def runLabelFilterSplitBins(
     if os.path.exists(temp_folder_path) is False:
         os.mkdir(temp_folder_path)
 
-    if stop_at_step2 is False:
+    originalBinsCheckMPath = None
+    if self_evaluate is False:
         print("\n")
         print("Starting Call Genes...")
-        callMarkerGenes(inputBinFolder, temp_folder_path, num_cpus_call_genes, hmmModelPath, bin_suffix)
+        callMarkerGenes(inputBinFolder, temp_folder_path, num_threads_call_genes, hmmModelPath, bin_suffix)
+        print("Starting Run CheckM...")
+        runCheckMsingle(inputBinFolder, os.path.join(filterOutputFolder, "original_checkm.txt"),
+                    num_threads_per_checkm * checkM_process_num, bin_suffix)
+        originalBinsCheckMPath = os.path.join(filterOutputFolder, "original_checkm.txt")
 
     print("\n")
     print("Starting Filter Contaminations and Separate Bins...")
@@ -236,19 +243,17 @@ def runLabelFilterSplitBins(
         acc_cutoff,
         estimated_completeness_threshold,
         seq_length_threshold,
-        stop_at_step2=stop_at_step2
+        originalBinsCheckMPath,
+        self_evaluate=self_evaluate
     )
 
-    if stop_at_step2:
+    if self_evaluate:
         print()
         return
 
     print("\n")
     print("Starting Run CheckM...")
-    runCheckMsingle(inputBinFolder, os.path.join(filterOutputFolder, "original_checkm.txt"),
-                    num_cpus_per_checkm * checkM_parallel_num, bin_suffix)
-    runCheckMParall(filterOutputFolder, bin_suffix, checkM_parallel_num, num_cpus_per_checkm)
-    originalBinsCheckMPath = os.path.join(filterOutputFolder, "original_checkm.txt")
+    runCheckMParall(filterOutputFolder, bin_suffix, checkM_process_num, num_threads_per_checkm)
 
     print("\n")
     print("Starting Gather Result...")
@@ -321,10 +326,6 @@ def runCheckMsingle(binsFolder: str, checkmResFilePath: str, num_cpu: int, bin_s
             runCheckMsingle(binsFolder, checkmResFilePath, num_cpu, bin_suffix, repTime + 1)
     # res.wait()
     res.kill()
-
-
-index2Taxo = {1: "phylum_filter", 2: "class_filter", 3: "order_filter",
-              4: "family_filter", 5: "genus_filter", 6: "species_filter"}
 
 
 def runCheckMForSixFilter(filterFolder, indexList: List, num_checkm_cpu: int, bin_suffix: str):

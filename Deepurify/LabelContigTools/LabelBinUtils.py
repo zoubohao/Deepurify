@@ -16,6 +16,22 @@ from Deepurify.SeqProcessTools.SequenceUtils import (
     ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor)
 
 
+def gatherValues(v1, t2, num_labels):
+    """
+    t1 = torch.randn([3, 4])
+    t2 = torch.randn([3, 5, 4])
+    print(gatherValues(t1, t2, 5))
+    t2v = t2.view(15, 4)
+    print(t1 @ t2v.T)
+    """
+    b1 = v1.size(0)
+    b2 = t2.size(0)
+    assert b1 == b2, ValueError("Batch size is not equal.")
+    dotTensor = torch.tensordot(v1, t2, dims=([1], [2])).permute([0, 2, 1])  # [b1, num_labels, b2]
+    index = torch.arange(b1).expand([num_labels, b1]).transpose(1, 0).unsqueeze(-1).to(dotTensor.device)
+    return torch.gather(dotTensor, dim=-1, index=index).squeeze(-1)
+
+
 def buildTextsRepNormVector(taxo_tree: Dict, model: nn.Module, vocabulary: Dict[str, int], device: str, outputPath: str) -> Dict:
     text2repV = {}
 
@@ -50,7 +66,6 @@ def taxonomyLabelGreedySearch(
     taxo_tree: Dict,
     annotated_level: int,
     text2repNormVector: Dict,
-    gather_func: Callable,
     logitNum: torch.Tensor,
     curMaxList: List,
     phy_fc: Union[None, nn.Module],
@@ -73,7 +88,7 @@ def taxonomyLabelGreedySearch(
             curTextsNames.append(child["Name"])
             curNextChild.append(child)
         textNorm = torch.stack(curstackedTextsTensorList, dim=0).unsqueeze(0)
-        innerSFT = torch.softmax(gather_func(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
+        innerSFT = torch.softmax(gatherValues(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
         if len(innerSFT.shape) == 2:
             innerSFT = innerSFT.squeeze(0)
         innerMaxIndex = innerSFT.argmax()
@@ -96,7 +111,7 @@ def taxonomyLabelGreedySearch(
         if next_taxo_tree["TaxoLevel"] != index2Taxo[annotated_level]:
             visRepVector = visRepVector.squeeze(0)
             return taxonomyLabelGreedySearch(
-                visRepVector, annotatedRes + "@", next_taxo_tree, annotated_level, text2repNormVector, gather_func, logitNum, curMaxList, None
+                visRepVector, annotatedRes + "@", next_taxo_tree, annotated_level, text2repNormVector, logitNum, curMaxList, None
             )
         else:
             return annotatedRes
@@ -113,7 +128,7 @@ def taxonomyLabelGreedySearch(
                 curTextsNames.append(cur_anntotated + child["Name"])
                 curNextChild.append(child)
         textNorm = torch.stack(curstackedTextsTensorList, dim=0).unsqueeze(0)
-        innerSFT = torch.softmax(gather_func(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
+        innerSFT = torch.softmax(gatherValues(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
         if len(innerSFT.shape) == 2:
             innerSFT = innerSFT.squeeze(0)
         maxIndex = innerSFT.argmax()
@@ -124,7 +139,7 @@ def taxonomyLabelGreedySearch(
             if next_taxo_tree["TaxoLevel"] != index2Taxo[annotated_level]:
                 visRepVector = visRepVector.squeeze(0)
                 return taxonomyLabelGreedySearch(
-                    visRepVector, annotatedRes + "@", next_taxo_tree, annotated_level, text2repNormVector, gather_func, logitNum, curMaxList, None
+                    visRepVector, annotatedRes + "@", next_taxo_tree, annotated_level, text2repNormVector, logitNum, curMaxList, None
                 )
             else:
                 return annotatedRes
@@ -132,13 +147,12 @@ def taxonomyLabelGreedySearch(
             return annotatedRes
 
 
-def taxonomyLabelDFSSearch(
+def taxonomyLabelTopkSearch(
     result: List,
     visRepVector: torch.Tensor,
     cur_anntotated: str,
     taxo_tree: Dict,
     text2repNormVector: Dict,
-    gather_func: Callable,
     logitNum: torch.Tensor,
     phy_fc: Union[None, nn.Module],
     topK: int,
@@ -165,7 +179,7 @@ def taxonomyLabelDFSSearch(
             curTextsNames.append(child["Name"])
             curNextChild.append(child)
         textNorm = torch.stack(curstackedTextsTensorList, dim=0).unsqueeze(0)
-        innerSFT = torch.softmax(gather_func(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
+        innerSFT = torch.softmax(gatherValues(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
         if len(innerSFT.shape) == 2:
             innerSFT = innerSFT.squeeze(0)
         innerMaxIndex = innerSFT.argmax()
@@ -188,13 +202,12 @@ def taxonomyLabelDFSSearch(
             curProbs = [pair[2]]
             v = pair[3] * bouns[curLevel]
             visRepVector = visRepVector.squeeze(0)
-            taxonomyLabelDFSSearch(
+            taxonomyLabelTopkSearch(
                 result,
                 visRepVector,
                 annotatedRes + "@",
                 next_taxo_tree,
                 text2repNormVector,
-                gather_func,
                 logitNum,
                 None,
                 topK,
@@ -215,7 +228,7 @@ def taxonomyLabelDFSSearch(
                 curTextsNames.append(cur_anntotated + child["Name"])
                 curNextChild.append(child)
         textNorm = torch.stack(curstackedTextsTensorList, dim=0).unsqueeze(0)
-        innerSFT = torch.softmax(gather_func(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
+        innerSFT = torch.softmax(gatherValues(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
         thisTopK = topK
         if curLevel <= 2:
             thisTopK = topK - 1
@@ -245,13 +258,12 @@ def taxonomyLabelDFSSearch(
                 curProbs = pair[2]
                 v = pair[3] * bouns[curLevel]
                 visRepVector = visRepVector.squeeze(0)
-                taxonomyLabelDFSSearch(
+                taxonomyLabelTopkSearch(
                     result,
                     visRepVector,
                     annotatedRes + "@",
                     next_taxo_tree,
                     text2repNormVector,
-                    gather_func,
                     logitNum,
                     None,
                     topK,
@@ -530,7 +542,6 @@ def subProcessLabelGreedySearch(
     taxo_tree: Dict,
     annotated_level: int,
     text2repNormVector: Dict[str, torch.Tensor],
-    func: Callable,
     logitNum: torch.Tensor,
     phy_fc: nn.Module,
 ):
@@ -539,18 +550,17 @@ def subProcessLabelGreedySearch(
         curMaxList = []
         with torch.no_grad():
             anntotated_res = taxonomyLabelGreedySearch(
-                inputVector, "", taxo_tree, annotated_level, text2repNormVector, func, logitNum, curMaxList, phy_fc
+                inputVector, "", taxo_tree, annotated_level, text2repNormVector, logitNum, curMaxList, phy_fc
             )
         name2res[names[i]] = (anntotated_res, curMaxList)
     return name2res
 
 
-def subProcessLabelDFSSearch(
+def subProcessLabelTopkSearch(
     inputVectorList: List[torch.Tensor],
     names: List[str],
     taxo_tree: Dict,
     text2repNormVector: Dict[str, torch.Tensor],
-    func: Callable,
     logitNum: torch.Tensor,
     phy_fc: nn.Module,
     topK: int,
@@ -559,7 +569,7 @@ def subProcessLabelDFSSearch(
     with torch.no_grad():
         for i, inputVector in enumerate(inputVectorList):
             result = []
-            taxonomyLabelDFSSearch(result, inputVector, "", taxo_tree, text2repNormVector, func, logitNum, phy_fc, topK, None, 1.0)
+            taxonomyLabelTopkSearch(result, inputVector, "", taxo_tree, text2repNormVector, logitNum, phy_fc, topK, None, 1.0)
             sortedRes = list(sorted(result, key=lambda x: x[2], reverse=True))
             n = len(sortedRes)
             k = n // 4 * 3
@@ -578,7 +588,7 @@ def subProcessLabelDFSSearch(
             inputVector = inputVector.unsqueeze(0)
             visRepNorm = inputVector / inputVector.norm(dim=-1, keepdim=True)
             textNorm = torch.stack(annotTextNormTensors, dim=0).unsqueeze(0)
-            innerSFT = torch.softmax(func(visRepNorm, textNorm, len(annotTextNormTensors)).squeeze(0) * logitNum, dim=-1)
+            innerSFT = torch.softmax(gatherValues(visRepNorm, textNorm, len(annotTextNormTensors)).squeeze(0) * logitNum, dim=-1)
             if len(innerSFT.shape) >= 2:
                 innerSFT = innerSFT.squeeze(0)
             annotScore = np.array(annotScore, dtype=np.float32)
@@ -607,7 +617,7 @@ def labelBinFastaFile(
     th="",
     n="",
     binName="",
-    dfsORgreedy="dfs",
+    topkORgreedy="topk",
     topK=3,
 ):
     pid = str(os.getpid())
@@ -673,7 +683,7 @@ def labelBinFastaFile(
     step = len(names) // num_cpu + 1
     with ThreadPoolExecutor(max_workers=num_cpu) as t:
         for i in range(num_cpu):
-            if dfsORgreedy.lower() == "greedy":
+            if topkORgreedy.lower() == "greedy":
                 p = t.submit(
                     subProcessLabelGreedySearch,
                     visRepVectorList[step * i: step * (i + 1)],
@@ -681,24 +691,22 @@ def labelBinFastaFile(
                     taxo_tree,
                     annotated_level,
                     text2repNormVector,
-                    model.gatherValues,
                     logitNum,
                     phy_fc,
                 )
-            elif dfsORgreedy.lower() == "dfs":
+            elif topkORgreedy.lower() == "topk":
                 p = t.submit(
-                    subProcessLabelDFSSearch,
+                    subProcessLabelTopkSearch,
                     visRepVectorList[step * i: step * (i + 1)],
                     names[step * i: step * (i + 1)],
                     taxo_tree,
                     text2repNormVector,
-                    model.gatherValues,
                     logitNum,
                     phy_fc,
                     topK,
                 )
             else:
-                raise ValueError("No Implement Other Searching Algorithms Besides DFS & Greedy Search.")
+                raise ValueError("No Implement Other Searching Algorithms Besides Top-K or Greedy Search.")
             processList.append(p)
         for async_res in as_completed(processList):
             name2res = async_res.result()
@@ -728,7 +736,7 @@ def labelONEBinAndWrite(
     th="",
     n="",
     binName="",
-    dfsORgreedy="dfs",
+    topkORgreedy="topk",
     topK=3,
 ):
     name2annotated, name2maxList = labelBinFastaFile(
@@ -749,7 +757,7 @@ def labelONEBinAndWrite(
         th=th,
         n=n,
         binName=binName,
-        dfsORgreedy=dfsORgreedy,
+        topkORgreedy=topkORgreedy,
         topK=topK,
     )
     outputPath = os.path.join(outputFolder, binName + ".txt")
@@ -773,7 +781,7 @@ def labelBinsFolder(
     num_cpu=6,
     overlapping_ratio=0.5,
     cutSeqLength=8192,
-    dfsORgreedy="dfs",
+    topkORgreedy="topk",
     topK=3,
     error_queue=None,
     model_config=None,
@@ -852,7 +860,7 @@ def labelBinsFolder(
                     i,
                     num_files,
                     binName,
-                    dfsORgreedy,
+                    topkORgreedy,
                     topK,
                 )
         error_queue.put(None)

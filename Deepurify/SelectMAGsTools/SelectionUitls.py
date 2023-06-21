@@ -6,8 +6,8 @@ from typing import Dict, List, Tuple
 
 from Deepurify.IOUtils import readBinName2Annot, readCheckMResultAndStat, readPickle
 
-index2Taxo = {1: "phylum_filter", 2: "class_filter", 3: "order_filter", 4: "family_filter", 5: "genus_filter", 6: "species_filter"}
 
+index2Taxo = {1: "T1_filter", 2: "T2_filter", 3: "T3_filter", 4: "T4_filter", 5: "T5_filter", 6: "T6_filter"}
 
 class Tree:
     def __init__(self, binName: str, annotName: str, qualityValues: Tuple[float, float, str], core: List[bool]) -> None:
@@ -26,7 +26,7 @@ class Tree:
 
 
 def getScore(qualityValues: Tuple[float, float, str]) -> float:
-    score = qualityValues[0] - 5.0 * qualityValues[1]
+    score = qualityValues[0] - qualityValues[1]
     if qualityValues[-1] == "HighQuality":
         score += 200.0
     elif qualityValues[-1] == "MediumQuality":
@@ -115,7 +115,7 @@ def dfsFindBestBins(
 
 def getScoreForLowquality(
         qualityValues: Tuple[float, float, str]) -> float:
-    score = qualityValues[0] - 3.0 * qualityValues[1]
+    score = qualityValues[0] - qualityValues[1]
     return score
 
 
@@ -154,10 +154,11 @@ def findBestBinsAfterFiltering(
     _, suffix = os.path.splitext(binFileName)
     # It has medium or high quality bins
     if n > 0:
-        for qualityValues, treeNode in root.pathBests:
+        for k, (qualityValues, treeNode) in enumerate(root.pathBests):
             level = len(treeNode.core) - 1
             curBinName = treeNode.binName
-            outName = curBinName + "_" + str(level) + suffix
+            perfix = curBinName.split("___")[0]
+            outName = perfix + "_" + str(k) + suffix
             outInfo.append((outName, qualityValues, treeNode.annotName))
             if level == 0:
                 copy(os.path.join(inputFileFolder, binFileName), os.path.join(outputPath, outName))
@@ -171,8 +172,9 @@ def findBestBinsAfterFiltering(
         res = list(sorted(res, key=lambda x: x[0], reverse=True))
         coreLeaf = res[0][1]
         curBinName = coreLeaf.binName
+        perfix = curBinName.split("___")[0]
         l = len(coreLeaf.core) - 1
-        outName = curBinName + "_" + str(l) + suffix
+        outName = perfix + "_0" + suffix
         outInfo.append((outName, coreLeaf.qualityValues, coreLeaf.annotName))
         if l == 0:
             copy(os.path.join(inputFileFolder, binFileName), os.path.join(outputPath, outName))

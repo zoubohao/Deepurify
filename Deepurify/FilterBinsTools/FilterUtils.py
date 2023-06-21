@@ -3,11 +3,17 @@ import os
 import sys
 from copy import deepcopy
 from multiprocessing import Process
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
 
-from Deepurify.IOUtils import (readAnnotResult, readFasta, readHMMFile,
-                               writeAnnot2BinNames, writeFasta)
-from Deepurify.LabelContigTools.LabelBinUtils import getBestMultiLabelsForFiltering
+import numpy as np
+
+from Deepurify.IOUtils import (readAnnotResult, readCheckMResultAndStat,
+                               readFasta, readHMMFile, writeAnnot2BinNames,
+                               writeFasta)
+from Deepurify.LabelContigTools.LabelBinUtils import \
+    getBestMultiLabelsForFiltering
+
+index2Taxo = {1: "T1_filter", 2: "T2_filter", 3: "T3_filter", 4: "T4_filter", 5: "T5_filter", 6: "T6_filter"}
 
 
 def summedLengthCal(
@@ -61,13 +67,21 @@ def allocate(
             splitRecordGenes.append(curDict)
 
 
+def summedRecord(recordList):
+    summedValue = 0.0
+    for num, _ in recordList:
+        summedValue += num
+    return summedValue
+
+
 def splitContigs(
     contigName2seq: Dict[str, str],
     gene2contigNames: Dict[str, List[str]],
     contigName2_gene2num: Dict[str, Dict[str, int]],
     replication_times_threashold: int,
     estimate_completeness_threshold: float,
-    core: bool
+    core: bool,
+    thre: float = 0.72
 ) -> List[Dict[str, str]]:
     c1 = deepcopy(contigName2seq)
     c2 = deepcopy(gene2contigNames)
@@ -142,19 +156,43 @@ def splitContigs(
 
     filtedContigList = sorted(filtedContigList, key=lambda x: x[-1], reverse=True)
     first = filtedContigList[0]
-    if first[1] <= 0.72:
+    if first[1] <= thre :
         return splitContigs(c1,
                             c2,
                             c3,
                             replication_times_threashold + 1,
                             estimate_completeness_threshold,
-                            core)
+                            core,
+                            thre)
     else:
         result = []
         for i, infoPair in enumerate(filtedContigList):
             if infoPair[1] >= estimate_completeness_threshold or i == 0:
                 result.append(infoPair[0])
         return result
+
+
+def modify(contigName2annot, coreNames):
+    N = 0.0
+    n = 0.0
+    recordCount = [[0.0, ""] for _ in range(len(coreNames))]
+    for _, annotLabel in contigName2annot.items():
+        for i, coreName in enumerate(coreNames):
+            if coreName == annotLabel:
+                n += 1
+                recordCount[i][0] += 1
+                recordCount[i][1] = coreName
+        N += 1
+    if (n / N + 0.0) >= 0.8:
+        sortedRecordCount = list(sorted(recordCount, key=lambda x: x[0]))
+        while len(sortedRecordCount) > 1 and (summedRecord(sortedRecordCount) / N + 0.0) > 0.68:
+            sortedRecordCount.pop(0)
+        newCoreNames = [coreNames[0]]
+        for _, coreTaxo in sortedRecordCount:
+            if coreTaxo != newCoreNames[0]:
+                newCoreNames.append(coreTaxo)
+        coreNames = deepcopy(newCoreNames)
+    return coreNames
 
 
 def filterContaminationOneBin(
@@ -167,7 +205,8 @@ def filterContaminationOneBin(
     acc_cutoff: float,
     estimate_completeness_threshold: float,
     seq_length_threshold: int,
-    stop_at_step2=False
+    originalBinsCheckMPath,
+    self_evaluate=False
 ) -> None:
     assert 1 <= taxoLevel <= 6, ValueError("The taxoLevel must between 1 to 6.")
     assert 0.4 <= ratio_cutoff, ValueError("The ratio_cutoff value must bigger than 0.4")
@@ -191,37 +230,14 @@ def filterContaminationOneBin(
     filtedContigName2seq = {}
     annot2_contigName2seq = {}
 
-    def summedRecord(recordList):
-        summedValue = 0.0
-        for num, _ in recordList:
-            summedValue += num
-        return summedValue
-
     if taxoLevel == 6:
-        N = 0.0
-        n = 0.0
-        recordCount = [[0.0, ""] for _ in range(len(coreNames))]
-        for _, annotLabel in contigName2annot.items():
-            for i, coreName in enumerate(coreNames):
-                if coreName == annotLabel:
-                    n += 1
-                    recordCount[i][0] += 1
-                    recordCount[i][1] = coreName
-            N += 1
-        if (n / N + 0.0) >= 0.8:
-            sortedRecordCount = list(sorted(recordCount, key=lambda x: x[0]))
-            while len(sortedRecordCount) > 1 and (summedRecord(sortedRecordCount) / N + 0.0) > 0.68:
-                sortedRecordCount.pop(0)
-            newCoreNames = [coreNames[0]]
-            for _, coreTaxo in sortedRecordCount:
-                if coreTaxo != newCoreNames[0]:
-                    newCoreNames.append(coreTaxo)
-            coreNames = deepcopy(newCoreNames)
+        coreNames = modify(contigName2annot, coreNames)
 
     for key, seq in contigName2seq.items():
         for coreName in coreNames:
             if coreName in contigName2annot[key]:
                 filtedContigName2seq[key] = seq
+        
         if key not in filtedContigName2seq:
             curAnnot = "@".join(contigName2annot[key].split("@")[0:taxoLevel])
             if curAnnot not in annot2_contigName2seq:
@@ -237,47 +253,55 @@ def filterContaminationOneBin(
     annot2binNames = {}
     writeFasta(filtedContigName2seq, os.path.join(outputFastaFolder, binName))
 
-    if stop_at_step2:
+    if self_evaluate:
         return
 
     # using SCGs to exclude external contigs.
     gene2contigList, contigName2_gene2num = readHMMFile(hmmFilePath, ratio_cutoff, acc_cutoff)
     annot2binNames[coreNames[0]] = [binName]
     binNamePro, bin_suffix = os.path.splitext(binName)
-    filtedContigName2seqList = splitContigs(filtedContigName2seq, gene2contigList, contigName2_gene2num, 1, estimate_completeness_threshold, True)
-    # Write the split bins from core taxonomy
-    k = 0
+    
+    assert originalBinsCheckMPath is not None, ValueError("The checkm result of original MAGs is None.")
+    res = readCheckMResultAndStat(originalBinsCheckMPath)[0]
+    q = res[binNamePro]
+    
+    filtedContigName2seqList = \
+    splitContigs(filtedContigName2seq, gene2contigList, contigName2_gene2num, 1, estimate_completeness_threshold, True, getThre(q[0], q[1], taxoLevel))
+    
+    idx_k = 0
     for coreName2seqFilter in filtedContigName2seqList:
         summedLength = summedLengthCal(coreName2seqFilter)
         if summedLength >= seq_length_threshold:
-            annot2binNames[coreNames[0]].append(binNamePro + "_Core_" + str(k) + bin_suffix)
-            writeFasta(coreName2seqFilter, os.path.join(outputFastaFolder, binNamePro + "_Core_" + str(k) + bin_suffix))
-            k += 1
-    # Write the split bins do not from the core taxonomy
-    k = 0
+            annot2binNames[coreNames[0]].append(binNamePro + "___" + str(idx_k) + bin_suffix)
+            writeFasta(coreName2seqFilter, os.path.join(outputFastaFolder, binNamePro + "___" + str(idx_k) + bin_suffix))
+            idx_k += 1
+
     gene2contigList, contigName2_gene2num = readHMMFile(hmmFilePath, ratio_cutoff, acc_cutoff)
     for annot, noCoreContigName2seq in annot2_contigName2seq.items():
         if summedLengthCal(noCoreContigName2seq) >= seq_length_threshold:
             if annot not in annot2binNames:
-                annot2binNames[annot] = [binNamePro + "_NoCore_" + str(k) + bin_suffix]
+                annot2binNames[annot] = [binNamePro + "___" + str(idx_k) + bin_suffix]
             else:
-                annot2binNames[annot].append(binNamePro + "_NoCore_" + str(k) + bin_suffix)
-            writeFasta(noCoreContigName2seq, os.path.join(outputFastaFolder, binNamePro + "_NoCore_" + str(k) + bin_suffix))
-            k += 1
+                annot2binNames[annot].append(binNamePro + "___" + str(idx_k) + bin_suffix)
+            writeFasta(noCoreContigName2seq, os.path.join(outputFastaFolder, binNamePro + "___" + str(idx_k) + bin_suffix))
+            idx_k += 1
+        
         curFilteredList = splitContigs(noCoreContigName2seq, gene2contigList, contigName2_gene2num, 1, estimate_completeness_threshold, False)
         for noCoreName2seqFilter in curFilteredList:
             summedLength = summedLengthCal(noCoreName2seqFilter)
             if summedLength >= seq_length_threshold:
                 if annot not in annot2binNames:
-                    annot2binNames[annot] = [binNamePro + "_NoCore_" + str(k) + bin_suffix]
+                    annot2binNames[annot] = [binNamePro + "___" + str(idx_k) + bin_suffix]
                 else:
-                    annot2binNames[annot].append(binNamePro + "_NoCore_" + str(k) + bin_suffix)
-                writeFasta(noCoreName2seqFilter, os.path.join(outputFastaFolder, binNamePro + "_NoCore_" + str(k) + bin_suffix))
-                k += 1
+                    annot2binNames[annot].append(binNamePro + "___" + str(idx_k) + bin_suffix)
+                writeFasta(noCoreName2seqFilter, os.path.join(outputFastaFolder, binNamePro + "___" + str(idx_k) + bin_suffix))
+                idx_k += 1
+
     writeAnnot2BinNames(annot2binNames, os.path.join(outputFastaFolder, binNamePro + "_BinNameToLineage.ann"))
 
 
-index2Taxo = {1: "phylum_filter", 2: "class_filter", 3: "order_filter", 4: "family_filter", 5: "genus_filter", 6: "species_filter"}
+def sigmoid(z):
+    return 1/(1 + np.exp(-z))
 
 
 def subProcessFilter(
@@ -291,7 +315,8 @@ def subProcessFilter(
     acc_cutoff: float,
     estimate_completeness_threshold: float,
     seq_length_threshold: int,
-    stop_at_step2=False
+    originalBinsCheckMPath,
+    self_evaluate=False
 ):
     binFiles = os.listdir(oriBinFolder)
     N = len(binFiles)
@@ -318,7 +343,8 @@ def subProcessFilter(
             acc_cutoff=acc_cutoff,
             estimate_completeness_threshold=estimate_completeness_threshold,
             seq_length_threshold=seq_length_threshold,
-            stop_at_step2=stop_at_step2
+            originalBinsCheckMPath = originalBinsCheckMPath,
+            self_evaluate=self_evaluate
         )
 
 
@@ -332,7 +358,8 @@ def filterContaminationFolder(
     acc_cutoff: float,
     estimate_completeness_threshold: float,
     seq_length_threshold: int,
-    stop_at_step2=False
+    originalBinsCheckMPath: Union[str, None],
+    self_evaluate=False
 ):
     for i in range(6):
         if os.path.exists(os.path.join(outputFolder, index2Taxo[i + 1])) is False:
@@ -353,10 +380,23 @@ def filterContaminationFolder(
                     acc_cutoff,
                     estimate_completeness_threshold,
                     seq_length_threshold,
-                    stop_at_step2,
+                    originalBinsCheckMPath,
+                    self_evaluate,
                 ),
             )
         )
         res[-1].start()
     for p in res:
         p.join()
+
+
+def getThre(comp, conta, taxoLevel): 
+    v1 = (conta - 10.) / 100.
+    v2 = (comp - 50.) / 100.
+    a = math.log(sigmoid(v1 * 0.9 + v2 * 0.3 - taxoLevel * 0.0125) + 1., 4.35)
+    thre = 1.0 - a
+    if thre > 0.77:
+        thre = 0.77
+    elif thre < 0.67:
+        thre = 0.67
+    return thre

@@ -2,6 +2,7 @@ import os
 from multiprocessing import Process
 from subprocess import Popen
 from typing import List
+from Deepurify.CallGenesTools.prodigal import ProdigalRunner
 
 from Deepurify.IOUtils import readFasta
 
@@ -17,27 +18,19 @@ def splitListEqually(input_list: List, num_parts: int) -> List[List[object]]:
     return out_list
 
 
-def runProgidalSingle(bin_path: str, ouputFAA_path: str) -> None:
-    if os.path.exists(ouputFAA_path):
+def runProgidalSingle(binName, bin_path: str, output_faa_folder_path: str) -> None:
+    outFAA_path = os.path.join(output_faa_folder_path, binName + ".faa")
+    if os.path.exists(outFAA_path):
         return
-    name2seq = readFasta(bin_path)
-    length = 0
-    mode = "single"
-    for key, seq in name2seq.items():
-        length += len(seq)
-    if length <= 100000:
-        mode = "meta"
-    res = Popen("prodigal -p {} -q -m  -g 11 -a {} -i {} > /dev/null".format(mode, ouputFAA_path, bin_path), shell=True)
-    res.wait()
-    res.kill()
+    runner = ProdigalRunner(binName, output_faa_folder_path)
+    runner.run(bin_path)
 
 
 def subProcessProgidal(files: List[str], bin_folder_path: str, output_faa_folder_path: str) -> None:
     for file in files:
         binName = os.path.splitext(file)[0]
         bin_path = os.path.join(bin_folder_path, file)
-        outFAA_path = os.path.join(output_faa_folder_path, binName + ".faa")
-        runProgidalSingle(bin_path, outFAA_path)
+        runProgidalSingle(binName, bin_path, output_faa_folder_path)
 
 
 def runProgidalFolder(bin_folder_path: str, output_faa_folder_path: str, num_cpu: int, bin_suffix: str) -> None:
