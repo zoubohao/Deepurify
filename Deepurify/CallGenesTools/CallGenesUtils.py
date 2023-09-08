@@ -12,14 +12,13 @@ def splitListEqually(input_list: List, num_parts: int) -> List[List[object]]:
     step = n // num_parts + 1
     out_list = []
     for i in range(num_parts):
-        curList = input_list[i * step: (i + 1) * step]
-        if curList:
+        if curList := input_list[i * step : (i + 1) * step]:
             out_list.append(curList)
     return out_list
 
 
 def runProgidalSingle(binName, bin_path: str, output_faa_folder_path: str) -> None:
-    outFAA_path = os.path.join(output_faa_folder_path, binName + ".faa")
+    outFAA_path = os.path.join(output_faa_folder_path, f"{binName}.faa")
     if os.path.exists(outFAA_path):
         return
     runner = ProdigalRunner(binName, output_faa_folder_path)
@@ -35,10 +34,9 @@ def subProcessProgidal(files: List[str], bin_folder_path: str, output_faa_folder
 
 def runProgidalFolder(bin_folder_path: str, output_faa_folder_path: str, num_cpu: int, bin_suffix: str) -> None:
     files = os.listdir(bin_folder_path)
-    bin_files = []
-    for file in files:
-        if os.path.splitext(file)[-1][1:] == bin_suffix:
-            bin_files.append(file)
+    bin_files = [
+        file for file in files if os.path.splitext(file)[-1][1:] == bin_suffix
+    ]
     splited_files = splitListEqually(bin_files, num_cpu)
     n = len(splited_files)
     ps = []
@@ -64,9 +62,10 @@ def runHMMsearchSingle(faa_path: str, ouput_path: str, hmm_model_path) -> None:
         return
     if os.path.exists(ouput_path):
         return
-    res = Popen("hmmsearch --domtblout {} --cpu 2 --notextw -E 0.01 --domE 0.01 --noali {} {} > /dev/null".format(ouput_path, hmm_model_path, faa_path),
-                shell=True,
-                )
+    res = Popen(
+        f"hmmsearch --domtblout {ouput_path} --cpu 2 --notextw -E 0.01 --domE 0.01 --noali {hmm_model_path} {faa_path} > /dev/null",
+        shell=True,
+    )
     res.wait()
     res.kill()
 
@@ -75,16 +74,15 @@ def subProcessHMM(hmm_model_path: str, files: List[str], faa_folder_path: str, o
     for file in files:
         binName = os.path.splitext(file)[0]
         faa_path = os.path.join(faa_folder_path, file)
-        output_path = os.path.join(output_folder_path, binName + ".HMM" + ".txt")
+        output_path = os.path.join(output_folder_path, f"{binName}.HMM.txt")
         runHMMsearchSingle(faa_path, output_path, hmm_model_path)
 
 
 def runHMMsearchFolder(faa_folder_path: str, output_folder_path: str, hmm_model_path: str, num_cpu: int, faa_suffix: str) -> None:
     files = os.listdir(faa_folder_path)
-    faa_files = []
-    for file in files:
-        if os.path.splitext(file)[-1][1:] == faa_suffix:
-            faa_files.append(file)
+    faa_files = [
+        file for file in files if os.path.splitext(file)[-1][1:] == faa_suffix
+    ]
     splited_files = splitListEqually(faa_files, num_cpu)
     n = len(splited_files)
     ps = []

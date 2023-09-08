@@ -1,3 +1,4 @@
+import contextlib
 import os
 import pickle
 import random
@@ -8,8 +9,7 @@ from typing import Dict
 import numpy as np
 import torch
 from Deepurify.IOUtils import loadTaxonomyTree, readFile
-from Deepurify.SeqProcessTools.SequenceUtils import (
-    ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor,
+from Deepurify.SeqProcessTools.SequenceUtils import (ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor,
     RandomlyReturnNegTaxoDiffPhy, RandomReturnNegTaxoSamePhy,
     SeqCutToModelLengthIntervalAndAddNoisy, maskAndPredict, maskSeq,
     returnTaxoTextsInSameLevel)
@@ -53,24 +53,21 @@ class SequenceTrainingDataset(Dataset):
         self.phylums = set()
         self.tree = loadTaxonomyTree(taxomonyTreePath)
         self.phy2Index = {}  # 0 is for out of distribution data
-        k = 0
-        for child in self.tree["Children"]:
+        for k, child in enumerate(self.tree["Children"]):
             self.phylums.add(child["Name"])
             self.phy2Index[child["Name"]] = k
-            k += 1
         self.num_phylum = len(self.phylums)
         with open(sampleName2weightPath, "r") as rh:
             for line in rh:
                 split_info = line.strip("\n").split("\t")
                 self.spName2weight[split_info[0]] = float(split_info[1])
-        rb = open(gmmModelPath, "rb")
-        self.gmmModel = pickle.load(rb)
-        rb.close()
+        with open(gmmModelPath, "rb") as rb:
+            self.gmmModel = pickle.load(rb)
 
     def __getitem__(self, index):
         with torch.no_grad():
             # data variable is a tuple, the first position is the sequence and the second position is the taxonomy label of this sequence
-            data = readFile(os.path.join(self.file_path, str(index) + ".txt"))
+            data = readFile(os.path.join(self.file_path, f"{str(index)}.txt"))
             seq = data[0]
             # add noisy
             seq, if_noisy = SeqCutToModelLengthIntervalAndAddNoisy(
@@ -91,7 +88,7 @@ class SequenceTrainingDataset(Dataset):
             # generateing negative labels
             matchTaxoLevel = np.random.choice(6, 1, replace=False, p=[0.14, 0.15, 0.16, 0.17, 0.18, 0.2]) + 1
             texts = data[1]
-            matchText = texts.split("@")[0: matchTaxoLevel[0]]
+            matchText = texts.split("@")[: matchTaxoLevel[0]]
             misMatchTensorList = []
             sameLevelMisMatches = returnTaxoTextsInSameLevel(matchText, self.num_mismatch // 2, self.tree)
             for misMatchText in sameLevelMisMatches:
@@ -113,14 +110,12 @@ class SequenceTrainingDataset(Dataset):
             for _ in range(num_sam_phy):
                 misMatchTaxoLevel = np.random.choice(5, 1, replace=False, p=[0.16, 0.18, 0.20, 0.22, 0.24]) + 2
                 misMatchText = RandomReturnNegTaxoSamePhy(self.tree, oriPhy, misMatchTaxoLevel[0], texts)
-                if misMatchText is not None:
-                    misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
-                else:
+                if misMatchText is None:
                     random.shuffle(mismatchPhylums)
                     startPhylum = mismatchPhylums[np.random.randint(self.num_phylum - 1)]
                     misMatchTaxoLevel = np.random.choice(6, 1, replace=False, p=[0.14, 0.15, 0.16, 0.17, 0.18, 0.2]) + 1
                     misMatchText = RandomlyReturnNegTaxoDiffPhy(self.tree, startPhylum, misMatchTaxoLevel[0], texts)
-                    misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
+                misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
             matchTextTensor = ConvertTextToIndexTensor(self.taxo_vocabulary, matchText)
             textList = misMatchTensorList
             insertIndex = np.random.choice(self.num_mismatch + 1, 1, replace=False)
@@ -133,7 +128,7 @@ class SequenceTrainingDataset(Dataset):
             # Constrain for label, the phylum tensor will be set as a anchor.
             oriPhyTensor = ConvertTextToIndexTensor(self.taxo_vocabulary, [oriPhy])
             lowMatchTaxoLevel = np.random.choice(5, 1, replace=False, p=[0.16, 0.18, 0.20, 0.22, 0.24]) + 2
-            lowMatchText = texts.split("@")[0: lowMatchTaxoLevel[0]]
+            lowMatchText = texts.split("@")[: lowMatchTaxoLevel[0]]
             lowMatchTextTensor = ConvertTextToIndexTensor(self.taxo_vocabulary, lowMatchText)
             # outer text tensor.
             random.shuffle(mismatchPhylums)
@@ -186,29 +181,24 @@ class SequenceSampledTestDataset(Dataset):
         self.file_path = file_path
         k = 0
         for file in os.listdir(file_path):
-            try:
+            with contextlib.suppress(Exception):
                 int(os.path.splitext(file)[0])
                 k += 1
-            except:
-                pass
         self.length = k
         self.num_mismatch = misMatchNum
         self.phylums = set()
         self.tree = loadTaxonomyTree(taxomonyTreePath)
         self.phy2Index = {}
-        k = 0
-        for child in self.tree["Children"]:
+        for k, child in enumerate(self.tree["Children"]):
             self.phylums.add(child["Name"])
             self.phy2Index[child["Name"]] = k
-            k += 1
         self.num_phylum = len(self.phylums)
-        rb = open(gmmModelPath, "rb")
-        self.gmmModel = pickle.load(rb)
-        rb.close()
+        with open(gmmModelPath, "rb") as rb:
+            self.gmmModel = pickle.load(rb)
 
     def __getitem__(self, index):
         with torch.no_grad():
-            data = readFile(os.path.join(self.file_path, str(index) + ".txt"))
+            data = readFile(os.path.join(self.file_path, f"{str(index)}.txt"))
             seq = data[0]
             seq, if_noisy = SeqCutToModelLengthIntervalAndAddNoisy(
                 seq, min_model_len=self.min_model_len, max_model_len=self.max_model_len, gmmModel=self.gmmModel, if_noisy=False
@@ -219,11 +209,12 @@ class SequenceSampledTestDataset(Dataset):
             )
             matchTaxoLevel = np.random.choice(6, 1, replace=False, p=[0.13, 0.14, 0.15, 0.16, 0.17, 0.25]) + 1
             texts = data[1]
-            matchText = texts.split("@")[0: matchTaxoLevel[0]]
-            misMatchTensorList = []
+            matchText = texts.split("@")[:matchTaxoLevel[0]]
             sameLevelMisMatches = returnTaxoTextsInSameLevel(matchText, self.num_mismatch // 2, self.tree)
-            for misMatchText in sameLevelMisMatches:
-                misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
+            misMatchTensorList = [
+                ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText)
+                for misMatchText in sameLevelMisMatches
+            ]
             oriPhy = matchText[0]
             copyPhys = deepcopy(self.phylums)
             copyPhys.remove(oriPhy)
@@ -241,14 +232,12 @@ class SequenceSampledTestDataset(Dataset):
             for _ in range(num_sam_phy):
                 misMatchTaxoLevel = np.random.choice(5, 1, replace=False, p=[0.14, 0.16, 0.18, 0.20, 0.32]) + 2
                 misMatchText = RandomReturnNegTaxoSamePhy(self.tree, oriPhy, misMatchTaxoLevel[0], texts)
-                if misMatchText is not None:
-                    misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
-                else:
+                if misMatchText is None:
                     random.shuffle(mismatchPhylums)
                     startPhylum = mismatchPhylums[np.random.randint(self.num_phylum - 1)]
                     misMatchTaxoLevel = np.random.choice(6, 1, replace=False, p=[0.13, 0.14, 0.15, 0.16, 0.17, 0.25]) + 1
                     misMatchText = RandomlyReturnNegTaxoDiffPhy(self.tree, startPhylum, misMatchTaxoLevel[0], texts)
-                    misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
+                misMatchTensorList.append(ConvertTextToIndexTensor(self.taxo_vocabulary, misMatchText))
             matchTextTensor = ConvertTextToIndexTensor(self.taxo_vocabulary, matchText)
             textList = misMatchTensorList
             insertIndex = np.random.choice(self.num_mismatch + 1, 1, replace=False)

@@ -39,18 +39,18 @@ def buildTextsRepNormVector(taxo_tree: Dict, model: nn.Module, vocabulary: Dict[
         if cur_taxo_tree["TaxoLevel"] != "genus":
             for child in cur_taxo_tree["Children"]:
                 this_name = child["Name"]
-                if cur_text == "":
+                if not cur_text:
                     textTensor = ConvertTextToIndexTensor(vocabulary, [this_name]).unsqueeze(0).unsqueeze(0).to(device)
                     text2repV[this_name] = model.textRepNorm(textTensor).detach().cpu().squeeze()
-                    inner(child, this_name + "@")
+                    inner(child, f"{this_name}@")
                 else:
-                    preNames = cur_text.split("@")[0:-1]
+                    preNames = cur_text.split("@")[:-1]
                     textTensor = ConvertTextToIndexTensor(vocabulary, preNames + [this_name]).unsqueeze(0).unsqueeze(0).to(device)
                     text2repV[cur_text + this_name] = model.textRepNorm(textTensor).detach().cpu().squeeze()
                     inner(child, cur_text + this_name + "@")
         else:
             for this_name in cur_taxo_tree["Children"]:
-                preNames = cur_text.split("@")[0:-1]
+                preNames = cur_text.split("@")[:-1]
                 textTensor = ConvertTextToIndexTensor(vocabulary, preNames + [this_name]).unsqueeze(0).unsqueeze(0).to(device)
                 text2repV[cur_text + this_name] = model.textRepNorm(textTensor).detach().cpu().squeeze()
 
@@ -79,10 +79,10 @@ def taxonomyLabelGreedySearch(
     index2Taxo = {1: "phylum", 2: "class", 3: "order", 4: "family", 5: "genus", 6: "species"}
     visRepVector = visRepVector.unsqueeze(0)
     visRepNorm = visRepVector / visRepVector.norm(dim=-1, keepdim=True)
-    if cur_anntotated == "":
-        curstackedTextsTensorList = []
-        curTextsNames = []
-        curNextChild = []
+    curstackedTextsTensorList = []
+    curTextsNames = []
+    curNextChild = []
+    if not cur_anntotated:
         for child in taxo_tree["Children"]:
             curstackedTextsTensorList.append(text2repNormVector[child["Name"]])
             curTextsNames.append(child["Name"])
@@ -96,29 +96,18 @@ def taxonomyLabelGreedySearch(
         if len(phySFT.shape) == 2:
             phySFT = phySFT.squeeze(0)
         phyMaxIndex = phySFT.argmax()
-        if innerMaxIndex != phyMaxIndex:
-            if innerSFT[innerMaxIndex] > phySFT[phyMaxIndex]:
-                maxIndex = innerMaxIndex
-                curMaxList.append(innerSFT[maxIndex].item())
-            else:
-                maxIndex = phyMaxIndex
-                curMaxList.append(phySFT[maxIndex].item())
-        else:
+        if (
+            innerMaxIndex != phyMaxIndex
+            and innerSFT[innerMaxIndex] > phySFT[phyMaxIndex]
+            or innerMaxIndex == phyMaxIndex
+        ):
             maxIndex = innerMaxIndex
             curMaxList.append(innerSFT[maxIndex].item())
-        annotatedRes = curTextsNames[maxIndex]
-        next_taxo_tree = curNextChild[maxIndex]
-        if next_taxo_tree["TaxoLevel"] != index2Taxo[annotated_level]:
-            visRepVector = visRepVector.squeeze(0)
-            return taxonomyLabelGreedySearch(
-                visRepVector, annotatedRes + "@", next_taxo_tree, annotated_level, text2repNormVector, logitNum, curMaxList, None
-            )
         else:
-            return annotatedRes
+            maxIndex = phyMaxIndex
+            curMaxList.append(phySFT[maxIndex].item())
+        annotatedRes = curTextsNames[maxIndex]
     else:
-        curstackedTextsTensorList = []
-        curTextsNames = []
-        curNextChild = []
         for child in taxo_tree["Children"]:
             if isinstance(child, str):
                 curstackedTextsTensorList.append(text2repNormVector[cur_anntotated + child])
@@ -134,17 +123,22 @@ def taxonomyLabelGreedySearch(
         maxIndex = innerSFT.argmax()
         curMaxList.append(innerSFT[maxIndex].item())
         annotatedRes = curTextsNames[maxIndex]
-        if len(curNextChild) != 0:
-            next_taxo_tree = curNextChild[maxIndex]
-            if next_taxo_tree["TaxoLevel"] != index2Taxo[annotated_level]:
-                visRepVector = visRepVector.squeeze(0)
-                return taxonomyLabelGreedySearch(
-                    visRepVector, annotatedRes + "@", next_taxo_tree, annotated_level, text2repNormVector, logitNum, curMaxList, None
-                )
-            else:
-                return annotatedRes
-        else:
+        if not curNextChild:
             return annotatedRes
+    next_taxo_tree = curNextChild[maxIndex]
+    if next_taxo_tree["TaxoLevel"] == index2Taxo[annotated_level]:
+        return annotatedRes
+    visRepVector = visRepVector.squeeze(0)
+    return taxonomyLabelGreedySearch(
+        visRepVector,
+        f"{annotatedRes}@",
+        next_taxo_tree,
+        annotated_level,
+        text2repNormVector,
+        logitNum,
+        curMaxList,
+        None,
+    )
 
 
 def taxonomyLabelTopkSearch(
@@ -167,13 +161,13 @@ def taxonomyLabelTopkSearch(
     """
     assert topK >= 2, "topK must bigger than 2."
     bouns = [1.6, 1.5, 1.4, 1.3, 1.2, 1.0]
-    addScore = [0.9, 0.4, 0.2, 0.1, 0.05, 0.025]
     visRepVector = visRepVector.unsqueeze(0)
     visRepNorm = visRepVector / visRepVector.norm(dim=-1, keepdim=True)
-    if cur_anntotated == "":
-        curstackedTextsTensorList = []
-        curTextsNames = []
-        curNextChild = []
+    curstackedTextsTensorList = []
+    curTextsNames = []
+    curNextChild = []
+    nextPairs = []
+    if not cur_anntotated:
         for child in taxo_tree["Children"]:
             curstackedTextsTensorList.append(text2repNormVector[child["Name"]])
             curTextsNames.append(child["Name"])
@@ -187,7 +181,6 @@ def taxonomyLabelTopkSearch(
         if len(phySFT.shape) == 2:
             phySFT = phySFT.squeeze(0)
         phyMaxIndex = phySFT.argmax()
-        nextPairs = []
         if innerMaxIndex != phyMaxIndex:
             curProbI = innerSFT[innerMaxIndex].item()
             nextPairs.append((innerMaxIndex, curTextsNames[innerMaxIndex], curProbI, curProbI))
@@ -205,7 +198,7 @@ def taxonomyLabelTopkSearch(
             taxonomyLabelTopkSearch(
                 result,
                 visRepVector,
-                annotatedRes + "@",
+                f"{annotatedRes}@",
                 next_taxo_tree,
                 text2repNormVector,
                 logitNum,
@@ -216,9 +209,6 @@ def taxonomyLabelTopkSearch(
                 curLevel + 1,
             )
     else:
-        curstackedTextsTensorList = []
-        curTextsNames = []
-        curNextChild = []
         for child in taxo_tree["Children"]:
             if isinstance(child, str):
                 curstackedTextsTensorList.append(text2repNormVector[cur_anntotated + child])
@@ -229,17 +219,15 @@ def taxonomyLabelTopkSearch(
                 curNextChild.append(child)
         textNorm = torch.stack(curstackedTextsTensorList, dim=0).unsqueeze(0)
         innerSFT = torch.softmax(gatherValues(visRepNorm, textNorm, len(curstackedTextsTensorList)).squeeze(0) * logitNum, dim=-1)
-        thisTopK = topK
-        if curLevel <= 2:
-            thisTopK = topK - 1
+        thisTopK = topK - 1 if curLevel <= 2 else topK
         if len(innerSFT.shape) == 2:
             innerSFT = innerSFT.squeeze(0)
         if innerSFT.shape[-1] >= thisTopK:
             topValues, topIndices = torch.topk(innerSFT, thisTopK, dim=-1)
         else:
             topValues, topIndices = torch.topk(innerSFT, innerSFT.shape[-1], dim=-1)
-        nextPairs = []
         bestProb = topValues[0].item()
+        addScore = [0.9, 0.4, 0.2, 0.1, 0.05, 0.025]
         for i, values in enumerate(topValues):
             curIndex = topIndices[i].item()
             curProb = values.item()
@@ -251,8 +239,8 @@ def taxonomyLabelTopkSearch(
                 nextPairs.append((curIndex, curAnnotatedRes, curProbs, value * curProb * 1.3))
             elif abs(bestProb - curProb) <= 0.2 and curProb > addScore[curLevel]:
                 nextPairs.append((curIndex, curAnnotatedRes, curProbs, value * curProb))
-        if len(curNextChild) != 0:
-            for pair in nextPairs:
+        for pair in nextPairs:
+            if curNextChild:
                 next_taxo_tree = curNextChild[pair[0]]
                 annotatedRes = pair[1]
                 curProbs = pair[2]
@@ -261,7 +249,7 @@ def taxonomyLabelTopkSearch(
                 taxonomyLabelTopkSearch(
                     result,
                     visRepVector,
-                    annotatedRes + "@",
+                    f"{annotatedRes}@",
                     next_taxo_tree,
                     text2repNormVector,
                     logitNum,
@@ -271,8 +259,7 @@ def taxonomyLabelTopkSearch(
                     v,
                     curLevel + 1,
                 )
-        else:
-            for pair in nextPairs:
+            else:
                 result.append((pair[1], pair[2], pair[3], text2repNormVector[pair[1]]))
 
 
@@ -284,10 +271,10 @@ def splitLongContig(name2seq: Dict[str, str], max_model_len: int, min_model_len:
             start = 0
             k = 0
             while start + max_model_len <= seqLen:
-                newName2seq[name + "___" + str(k)] = seq[start: start + max_model_len]
+                newName2seq[f"{name}___{str(k)}"] = seq[start: start + max_model_len]
                 start += int(max_model_len * (1.0 - overlappingRatio))
                 k += 1
-            newName2seq[name + "___" + str(k)] = seq[start:]
+            newName2seq[f"{name}___{str(k)}"] = seq[start:]
         else:
             newName2seq[name] = seq
     return newName2seq

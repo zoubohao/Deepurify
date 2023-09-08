@@ -139,8 +139,8 @@ def cleanMAGs(
     assert batch_size_per_gpu <= 20, "batch_size_per_gpu must smaller or equal with 20."
     assert num_threads_per_device <= 4, "num_threads_per_device must smaller or equal with 4."
 
-    if "/" == input_bin_folder_path[-1]:
-        input_bin_folder_path = input_bin_folder_path[0:-1]
+    if input_bin_folder_path[-1] == "/":
+        input_bin_folder_path = input_bin_folder_path[:-1]
 
     filesFolder = os.path.split(input_bin_folder_path)[0]
     if temp_output_folder is None:
@@ -153,7 +153,7 @@ def cleanMAGs(
         gpu_work_ratio = []
     else:
         gpu_work_ratio = [1.0 / gpu_num for _ in range(gpu_num - 1)]
-        gpu_work_ratio = gpu_work_ratio + [1.0 - sum(gpu_work_ratio)]
+        gpu_work_ratio += [1.0 - sum(gpu_work_ratio)]
     batch_size_per_gpu = [batch_size_per_gpu for _ in range(gpu_num)]
 
     if info_files_path is None:
@@ -182,7 +182,7 @@ def cleanMAGs(
         "The variable taxoVocabPath is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")
     assert taxoTreePath is not None, ValueError(
         "The variable taxoTreePath is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")
-    if self_evaluate is False:
+    if not self_evaluate:
         assert hmmModelPath is not None, ValueError(
             "The variable hmmModelPath is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")
 

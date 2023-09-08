@@ -80,33 +80,31 @@ class VisionEncoder(nn.Module):
         eX64 = eX64 * gateScore
         orieX64 = torch.clone(rawGateScore)  # B, C, L
         b, c, l = orieX64.shape
-        
+
         if self.reg:
             if self.handle is None:
                 print("######### Inject Hook #########")
                 self.handle = eX64.register_hook(self.save_gradient)
             self.feature_cam = eX64.clone().detach().cpu()
             self.outAtten = gateScore.clone().detach().cpu()
-            
+
         eX64 = torch.sum(eX64, dim=-1)
         if selectMask is None:
             return self.feature(eX64)
-        else:
-            selectMask = selectMask.unsqueeze(1).bool()
-            t1 = self.trans1(orieX64 + x64)
-            t2 = self.trans2(t1 + x32)
-            t3 = self.trans3(t2 + x16)
-            t4 = self.trans4(t3 + x8)
-            selectTokens = torch.reshape(torch.masked_select(t4, selectMask), shape=[b, 128, -1])
-            return (self.feature(eX64), selectTokens)
+        selectMask = selectMask.unsqueeze(1).bool()
+        t1 = self.trans1(orieX64 + x64)
+        t2 = self.trans2(t1 + x32)
+        t3 = self.trans3(t2 + x16)
+        t4 = self.trans4(t3 + x8)
+        selectTokens = torch.reshape(torch.masked_select(t4, selectMask), shape=[b, 128, -1])
+        return (self.feature(eX64), selectTokens)
 
     def forward(self, x, selectMask=None):
         """
         :param x: [B, C, L] B: batch size,
         :return: [B, feature_num] or ([B, feature_num], [B, feature_num, SelectedTokens])
         """
-        rep = self.forward_features(x, selectMask)
-        return rep
+        return self.forward_features(x, selectMask)
 
 
 class TextEncoder(nn.Module):
@@ -128,10 +126,7 @@ class TextEncoder(nn.Module):
 
     def forward(self, x):
         fea = self.forward_features(x)
-        if self.num_labels is None:
-            return fea
-        else:
-            return self.fc(fea)
+        return fea if self.num_labels is None else self.fc(fea)
 
 
 class SequenceCLIP(nn.Module):
@@ -182,9 +177,19 @@ class SequenceCLIP(nn.Module):
         featrue3MerRevCom = self.vocab3MerEmb(feature_3Mer_rev_com).permute([0, 2, 1])  # [B, C, L]
         featrue4Mer = self.vocab4MerEmb(feature_4Mer).permute([0, 2, 1])  # [B, C, L]
         featrue4MerRevCom = self.vocab4MerEmb(feature_4Mer_rev_com).permute([0, 2, 1])  # [B, C, L]
-        embedTensor = torch.cat([ori_rev_tensor, featrue3Mer, featrue3MerRevCom,
-                                featrue4Mer, featrue4MerRevCom], dim=1) + self.postionalEmb
-        return embedTensor  # [B, C, L] C = 108
+        return (
+            torch.cat(
+                [
+                    ori_rev_tensor,
+                    featrue3Mer,
+                    featrue3MerRevCom,
+                    featrue4Mer,
+                    featrue4MerRevCom,
+                ],
+                dim=1,
+            )
+            + self.postionalEmb
+        )
 
     def gatherValues(self, v1, t2, num_labels):
         """
@@ -234,7 +239,7 @@ class SequenceCLIP(nn.Module):
             image_features_norm = image_features_ori / image_features_ori.norm(dim=-1, keepdim=True)
             text_features_norm = text_features_ori / text_features_ori.norm(dim=-1, keepdim=True)
             logit_scale = self.logit_scale.exp()
-            oriPhyTensorNorm = text_features_norm[0:b]
+            oriPhyTensorNorm = text_features_norm[:b]
             matchTextTensorNorm = text_features_norm[b: b + b]
             outerMisMatchTextTensorNorm = text_features_norm[2 * b: 3 * b]
             pairTextTensor = text_features_norm[3 * b:]
@@ -291,8 +296,7 @@ class SequenceCLIP(nn.Module):
 
     def visionRep(self, images):
         with torch.no_grad():
-            image_features_ori = self.visionEncoder(images)  # [B, D]
-            return image_features_ori
+            return self.visionEncoder(images)
 
     def textRepNorm(self, texts):
         with torch.no_grad():

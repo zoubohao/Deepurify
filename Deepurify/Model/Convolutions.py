@@ -61,8 +61,7 @@ class SqueezeFeedForward(nn.Module):
         self.act = nn.GELU()
 
     def forward(self, x):
-        x1 = self.act(self.linear1(torch.flatten(self.avgpool(x), start_dim=1)))
-        return x1
+        return self.act(self.linear1(torch.flatten(self.avgpool(x), start_dim=1)))
 
 
 class ODConv1d(nn.Module):
@@ -125,10 +124,11 @@ class Block(nn.Module):
 class Bottleneck(nn.Module):
     def __init__(self, in_channels, out_channels, layers, expand=2, drop_connect_rate=0.25):
         super().__init__()
-        blocks = []
-        blocks.append(DownSample(in_channels, out_channels))
-        for _ in range(layers):
-            blocks.append(Block(out_channels, out_channels, expand, drop_connect_rate))
+        blocks = [DownSample(in_channels, out_channels)]
+        blocks.extend(
+            Block(out_channels, out_channels, expand, drop_connect_rate)
+            for _ in range(layers)
+        )
         self.bottleNeck = nn.Sequential(*blocks)
 
     def forward(self, x):

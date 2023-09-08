@@ -10,5 +10,4 @@ class PositionalEmbedding(nn.Module):
         self.pos_embedding = nn.Parameter(nn.init.kaiming_normal_(torch.randn(1, max_len, d_model)), requires_grad=True)
 
     def forward(self, x):
-        out = x + torch.sigmoid(self.pos_embedding)
-        return out
+        return x + torch.sigmoid(self.pos_embedding)

@@ -20,9 +20,8 @@ class FocalBCEwithLogitLoss(nn.Module):
             targets = targets.squeeze(-1)
         if alphas is None:
             alphas = torch.ones(outputs.shape, device=outputs.device)
-        else:
-            if len(alphas.shape) >= 2:
-                alphas = alphas.squeeze(-1)
+        elif len(alphas.shape) >= 2:
+            alphas = alphas.squeeze(-1)
         postiveProb = torch.sigmoid(outputs)
         postiveProb = torch.clip(postiveProb, min=1e-5, max=1.0 - 1e-5)
         negtiveProb = 1.0 - postiveProb
@@ -62,9 +61,7 @@ class FocalCrossEntropyLoss(nn.Module):
             if moderate.sum().isnan().float() != 0:
                 moderate = torch.ones_like(moderate).float().to(logprobsTruth.device)
         loss = -alphas * moderate * logprobsTruth
-        if sum_mean == "sum":
-            return loss.sum()
-        return loss.sum() / alphas.sum()
+        return loss.sum() if sum_mean == "sum" else loss.sum() / alphas.sum()
 
 
 def varianceLoss(z, val=1.0):
@@ -72,8 +69,7 @@ def varianceLoss(z, val=1.0):
     z: [B, D]
     """
     std_z = torch.sqrt(z.var(dim=0, keepdim=True) + 1e-4)
-    std_loss = torch.mean(F.relu(val - std_z))
-    return std_loss
+    return torch.mean(F.relu(val - std_z))
 
 
 def cosineLoss(oriPhyNormTensor, matchTextNormTensor, innerThre, outerThre, innerORouter="inner"):
@@ -99,8 +95,7 @@ def covarianceLoss(z):
     cov_z = (z.T @ z) / (n - 1)
     cov_mask = 1.0 - torch.eye(feature_dim)
     cov_mask = cov_mask.to(z.device)
-    cov_loss = (cov_z * cov_mask).pow_(2).mean()
-    return cov_loss
+    return (cov_z * cov_mask).pow_(2).mean()
 
 
 if __name__ == "__main__":

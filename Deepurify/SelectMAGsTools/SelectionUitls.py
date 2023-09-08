@@ -40,32 +40,35 @@ def dfsBuildTree(
         sevenFilteredChekcMList: List[Dict[str, Tuple[float, float, str]]],
         filterOutputFolder: str,
         binName: str):
-    if level <= 6:
-        assert 1 <= level <= 6, ValueError("Error with a wrong level information.")
-        curFolder = os.path.join(filterOutputFolder, index2Taxo[level])
-        curCheckMRes = sevenFilteredChekcMList[level]
-        curBinCoreName2lineage = readBinName2Annot(os.path.join(curFolder, binName + "_BinNameToLineage.ann"))
-        preAnnotName = tree.annotName
-        preCores = tree.core
-        annot2_binCoreNameChekmValue = {}
-        for binCoreName, annot in curBinCoreName2lineage.items():
-            thisBinCheckmVal = curCheckMRes[binCoreName]
-            score = getScore(thisBinCheckmVal)
-            if annot not in annot2_binCoreNameChekmValue:
-                annot2_binCoreNameChekmValue[annot] = [(binCoreName, thisBinCheckmVal, score)]
+    if level > 6:
+        return
+    assert 1 <= level <= 6, ValueError("Error with a wrong level information.")
+    curFolder = os.path.join(filterOutputFolder, index2Taxo[level])
+    curCheckMRes = sevenFilteredChekcMList[level]
+    curBinCoreName2lineage = readBinName2Annot(
+        os.path.join(curFolder, f"{binName}_BinNameToLineage.ann")
+    )
+    preAnnotName = tree.annotName
+    preCores = tree.core
+    annot2_binCoreNameChekmValue = {}
+    for binCoreName, annot in curBinCoreName2lineage.items():
+        thisBinCheckmVal = curCheckMRes[binCoreName]
+        score = getScore(thisBinCheckmVal)
+        if annot not in annot2_binCoreNameChekmValue:
+            annot2_binCoreNameChekmValue[annot] = [(binCoreName, thisBinCheckmVal, score)]
+        else:
+            annot2_binCoreNameChekmValue[annot].append((binCoreName, thisBinCheckmVal, score))
+    for annot, binCoreNameCheckmValue in annot2_binCoreNameChekmValue.items():
+        if preAnnotName in annot:
+            sortedValues = list(sorted(binCoreNameCheckmValue, key=lambda x: x[-1], reverse=True))
+            bestBinInfoTuple = sortedValues[0]
+            if annot == curBinCoreName2lineage[binName]:
+                preCores.append(True)
             else:
-                annot2_binCoreNameChekmValue[annot].append((binCoreName, thisBinCheckmVal, score))
-        for annot, binCoreNameCheckmValue in annot2_binCoreNameChekmValue.items():
-            if preAnnotName in annot:
-                sortedValues = list(sorted(binCoreNameCheckmValue, key=lambda x: x[-1], reverse=True))
-                bestBinInfoTuple = sortedValues[0]
-                if annot == curBinCoreName2lineage[binName]:
-                    preCores.append(True)
-                else:
-                    preCores.append(False)
-                node = tree.insert(bestBinInfoTuple[0], annot, bestBinInfoTuple[1], deepcopy(preCores))
-                dfsBuildTree(node, level + 1, sevenFilteredChekcMList, filterOutputFolder, binName)
-                preCores.pop(-1)
+                preCores.append(False)
+            node = tree.insert(bestBinInfoTuple[0], annot, bestBinInfoTuple[1], deepcopy(preCores))
+            dfsBuildTree(node, level + 1, sevenFilteredChekcMList, filterOutputFolder, binName)
+            preCores.pop(-1)
 
 
 def buildTreeForBin(
@@ -89,7 +92,7 @@ def dfsFindBestBins(
             dfsFindBestBins(child)
         for child in curChildren:
             for qualityValuesC, child in child.pathBests:
-                if qualityValuesC[-1] == "MediumQuality" or qualityValuesC[-1] == "HighQuality":
+                if qualityValuesC[-1] in ["MediumQuality", "HighQuality"]:
                     tree.pathBests.append((qualityValuesC, child))
         highQNum = 0
         mediumQNum = 0
@@ -113,10 +116,8 @@ def dfsFindBestBins(
                 tree.pathBests = [(tree.qualityValues, tree)]
 
 
-def getScoreForLowquality(
-        qualityValues: Tuple[float, float, str]) -> float:
-    score = qualityValues[0] - qualityValues[1]
-    return score
+def getScoreForLowquality(qualityValues: Tuple[float, float, str]) -> float:
+    return qualityValues[0] - qualityValues[1]
 
 
 def findCoreOutput(
@@ -158,14 +159,13 @@ def findBestBinsAfterFiltering(
             level = len(treeNode.core) - 1
             curBinName = treeNode.binName
             perfix = curBinName.split("___")[0]
-            outName = perfix + "_" + str(k) + suffix
+            outName = f"{perfix}_{str(k)}{suffix}"
             outInfo.append((outName, qualityValues, treeNode.annotName))
             if level == 0:
                 copy(os.path.join(inputFileFolder, binFileName), os.path.join(outputPath, outName))
             else:
                 copy(os.path.join(deepurifyFolderPath, "FilterOutput", index2Taxo[level], treeNode.binName + suffix),
                      os.path.join(outputPath, outName))
-    # this bin dose not have medium or high quality separated bins.
     else:
         res = []
         findCoreOutput(root, res)
@@ -174,7 +174,7 @@ def findBestBinsAfterFiltering(
         curBinName = coreLeaf.binName
         perfix = curBinName.split("___")[0]
         l = len(coreLeaf.core) - 1
-        outName = perfix + "_0" + suffix
+        outName = f"{perfix}_0{suffix}"
         outInfo.append((outName, coreLeaf.qualityValues, coreLeaf.annotName))
         if l == 0:
             copy(os.path.join(inputFileFolder, binFileName), os.path.join(outputPath, outName))

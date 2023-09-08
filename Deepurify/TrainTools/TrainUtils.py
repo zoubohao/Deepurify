@@ -68,12 +68,11 @@ def SampledTestValid(model, test_data_loader, device=torch.device("cuda:0")):
 
 
 def valid_epoch(model, sampled_test_data_loader, device=torch.device("cuda:0")):
-    samPair = SampledTestValid(model, sampled_test_data_loader, device)
-    return samPair
+    return SampledTestValid(model, sampled_test_data_loader, device)
 
 
 def save_model(save_dir, model, samPair, optimizer):
-    filename = save_dir + "samPair_" + str(samPair)[0:8] + ".pth"
+    filename = f"{save_dir}samPair_{str(samPair)[:8]}.pth"
     torch.save(model.module.state_dict(), filename)
 
 

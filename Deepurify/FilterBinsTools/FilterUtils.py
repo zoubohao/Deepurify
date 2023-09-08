@@ -12,16 +12,13 @@ from Deepurify.IOUtils import (readAnnotResult, readCheckMResultAndStat,
                                writeFasta)
 from Deepurify.LabelContigTools.LabelBinUtils import \
     getBestMultiLabelsForFiltering
+from Deepurify.SeqProcessTools.SequenceUtils import getThre
 
 index2Taxo = {1: "T1_filter", 2: "T2_filter", 3: "T3_filter", 4: "T4_filter", 5: "T5_filter", 6: "T6_filter"}
 
 
-def summedLengthCal(
-        name2seq: Dict[str, str]) -> int:
-    summedLength = 0
-    for _, seq in name2seq.items():
-        summedLength += len(seq)
-    return summedLength
+def summedLengthCal(name2seq: Dict[str, str]) -> int:
+    return sum(len(seq) for seq in name2seq.values())
 
 
 def allocate(
@@ -30,13 +27,8 @@ def allocate(
     info: Tuple[str, Dict[str, int], int],
     replication_times_threashold: int,
 ) -> None:
-    if len(splitContigSetList) == 0:
-        curSet = set()
-        curSet.add(info[0])
-        splitContigSetList.append(curSet)
-        curDict = dict()
-        curDict.update(info[1])
-        splitRecordGenes.append(curDict)
+    if not splitContigSetList:
+        _extracted_from_allocate_8(info, splitContigSetList, splitRecordGenes)
     else:
         insertIndex = None
         for i, record in enumerate(splitRecordGenes):
@@ -59,12 +51,15 @@ def allocate(
                 else:
                     curRecord[gene] += num
         else:
-            curSet = set()
-            curSet.add(info[0])
-            splitContigSetList.append(curSet)
-            curDict = dict()
-            curDict.update(info[1])
-            splitRecordGenes.append(curDict)
+            _extracted_from_allocate_8(info, splitContigSetList, splitRecordGenes)
+
+
+def _extracted_from_allocate_8(info, splitContigSetList, splitRecordGenes):
+    curSet = {info[0]}
+    splitContigSetList.append(curSet)
+    curDict = {}
+    curDict |= info[1]
+    splitRecordGenes.append(curDict)
 
 
 def summedRecord(recordList):
@@ -86,12 +81,15 @@ def splitContigs(
     c1 = deepcopy(contigName2seq)
     c2 = deepcopy(gene2contigNames)
     c3 = deepcopy(contigName2_gene2num)
-    contigSeqPair = []
-    for contigName, seq in contigName2seq.items():
-        contigSeqPair.append((contigName, len(seq)))
-    exist_contigs = []
-    for contig, _ in sorted(contigSeqPair, key=lambda x: x[1], reverse=False):
-        exist_contigs.append(contig)
+    contigSeqPair = [
+        (contigName, len(seq)) for contigName, seq in contigName2seq.items()
+    ]
+    exist_contigs = [
+        contig
+        for contig, _ in sorted(
+            contigSeqPair, key=lambda x: x[1], reverse=False
+        )
+    ]
     existGene2contigNames = {}  # subset of gene2contigNames
     existcontig2_gene2num = {}
     notExistGeneContig = set()
@@ -108,9 +106,10 @@ def splitContigs(
             notExistGeneContig.add(contig)
             notExistGeneContig2seq[contig] = deepcopy(contigName2seq[contig])
 
-    geneInfo = []
-    for gene, contigList in existGene2contigNames.items():
-        geneInfo.append((gene, contigList, len(set(contigList))))
+    geneInfo = [
+        (gene, contigList, len(set(contigList)))
+        for gene, contigList in existGene2contigNames.items()
+    ]
     sortGeneInfo = list(sorted(geneInfo, key=lambda x: x[-1], reverse=False))
     splitContigSetList = []
     splitRecordGenes = []
@@ -129,12 +128,8 @@ def splitContigs(
         for info in sortedByLength:
             allocate(splitContigSetList, splitRecordGenes, info, replication_times_threashold)
 
-    if len(splitContigSetList) == 0:
-        if core:
-            return [notExistGeneContig2seq]
-        else:
-            return []
-
+    if not splitContigSetList:
+        return [notExistGeneContig2seq] if core else []
     totalN = len(existGene2contigNames)
     filtedContigList = []
     ratioSet = set()
@@ -156,7 +151,7 @@ def splitContigs(
 
     filtedContigList = sorted(filtedContigList, key=lambda x: x[-1], reverse=True)
     first = filtedContigList[0]
-    if first[1] <= thre :
+    if first[1] <= thre:
         return splitContigs(c1,
                             c2,
                             c3,
@@ -165,11 +160,11 @@ def splitContigs(
                             core,
                             thre)
     else:
-        result = []
-        for i, infoPair in enumerate(filtedContigList):
-            if infoPair[1] >= estimate_completeness_threshold or i == 0:
-                result.append(infoPair[0])
-        return result
+        return [
+            infoPair[0]
+            for i, infoPair in enumerate(filtedContigList)
+            if infoPair[1] >= estimate_completeness_threshold or i == 0
+        ]
 
 
 def modify(contigName2annot, coreNames):
@@ -183,9 +178,12 @@ def modify(contigName2annot, coreNames):
                 recordCount[i][0] += 1
                 recordCount[i][1] = coreName
         N += 1
-    if (n / N + 0.0) >= 0.8:
+    if n / N >= 0.8:
         sortedRecordCount = list(sorted(recordCount, key=lambda x: x[0]))
-        while len(sortedRecordCount) > 1 and (summedRecord(sortedRecordCount) / N + 0.0) > 0.68:
+        while (
+            len(sortedRecordCount) > 1
+            and summedRecord(sortedRecordCount) / N > 0.68
+        ):
             sortedRecordCount.pop(0)
         newCoreNames = [coreNames[0]]
         for _, coreTaxo in sortedRecordCount:
@@ -300,10 +298,6 @@ def filterContaminationOneBin(
     writeAnnot2BinNames(annot2binNames, os.path.join(outputFastaFolder, binNamePro + "_BinNameToLineage.ann"))
 
 
-def sigmoid(z):
-    return 1/(1 + np.exp(-z))
-
-
 def subProcessFilter(
     annotBinFolder: str,
     oriBinFolder: str,
@@ -388,15 +382,3 @@ def filterContaminationFolder(
         res[-1].start()
     for p in res:
         p.join()
-
-
-def getThre(comp, conta, taxoLevel): 
-    v1 = (conta - 10.) / 100.
-    v2 = (comp - 50.) / 100.
-    a = math.log(sigmoid(v1 * 0.9 + v2 * 0.3 - taxoLevel * 0.0125) + 1., 4.35)
-    thre = 1.0 - a
-    if thre > 0.77:
-        thre = 0.77
-    elif thre < 0.67:
-        thre = 0.67
-    return thre

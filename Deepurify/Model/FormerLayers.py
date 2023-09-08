@@ -255,11 +255,12 @@ class Gseqformer(nn.Module):
 class GseqformerEncoder(nn.Module):
     def __init__(self, expand, h, d_model, pairDim, dropout, layers):
         super().__init__()
-        block = []
         self.layers = layers
         self.pairDim = pairDim
-        for _ in range(layers - 1):
-            block.append(Gseqformer(expand, h, d_model, pairDim, dropout, False))
+        block = [
+            Gseqformer(expand, h, d_model, pairDim, dropout, False)
+            for _ in range(layers - 1)
+        ]
         block.append(Gseqformer(expand, h, d_model, pairDim, dropout, True))
         self.module_list = nn.ModuleList(block)
 

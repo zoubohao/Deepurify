@@ -27,8 +27,7 @@ def filterSpeciesNumInPhylumSmallerThanThreFiles(folder: str, outputFolder: str,
             phy2num[info[0]] = 1
         else:
             phy2num[info[0]] += 1
-    includePhySet = set()
-    includePhySet.add("Unclassified")
+    includePhySet = {"Unclassified"}
     for phyName, val in phy2num.items():
         if val >= threshold:
             includePhySet.add(phyName)
@@ -97,11 +96,9 @@ def taxonomyTreeBuild(split_func: Callable, file_path=None) -> Dict:
     """
     taxonomyTree = {"TaxoLevel": "superkingdom", "Name": "bacteria", "Children": []}
     with open(file_path, mode="r") as rh:
-        k = 0
         for line in rh:
             oneLine = line.strip("\n")
             insert(split_func(oneLine), taxonomyTree)
-        k += 1
     return taxonomyTree
 
 
@@ -120,15 +117,14 @@ def split_Pro_function(oneLine: str) -> List:
             curStr = ""
             for vocab in infor_split[1:]:
                 curStr = curStr + vocab.replace(" ", "-").replace("/", "-").replace(":", "-").replace("_", "-").replace(".", "-") + "-"
-            res.append(curStr[0:-1])
+            res.append(curStr[:-1])
         else:
             res.append("Unclassified")
     return res
 
 
 def split_file_function(oneLine: str) -> List:
-    levelsInfor = oneLine.split(".txt")[0].split("@")
-    return levelsInfor
+    return oneLine.split(".txt")[0].split("@")
 
 
 def checkTaxoExistInTree(taxoLevels: List, tree: Dict) -> bool:
@@ -136,28 +132,21 @@ def checkTaxoExistInTree(taxoLevels: List, tree: Dict) -> bool:
     :param taxoLevels: a list with the name of taxonomy levels: phylum, class, order, family, genus, and species in this order. List
     :param tree: the initial tree that is constructed with map structure. Dict
     """
+    children = tree["Children"]
+    curTaxo = taxoLevels[0]
+    signal = True
     if len(taxoLevels) != 1:
-        children = tree["Children"]
-        curTaxo = taxoLevels[0]
-        signal = True
         nextChild = None
         for child in children:
             if child["Name"] == curTaxo:
                 signal = False
                 nextChild = child
-        if signal:
-            return False
-        return checkTaxoExistInTree(taxoLevels[1:], nextChild)
+        return False if signal else checkTaxoExistInTree(taxoLevels[1:], nextChild)
     else:
-        signal = True
-        children = tree["Children"]
-        curTaxo = taxoLevels[0]
         for child in children:
             if child == curTaxo:
                 signal = False
-        if signal:
-            return False
-        return True
+        return not signal
 
 
 def buildVocabularyAndAssignWeightByPhylum(folder: str, vocab_path: str, samples_weight_path: str, base=math.e, if_weight=True) -> None:
@@ -183,7 +172,7 @@ def buildVocabularyAndAssignWeightByPhylum(folder: str, vocab_path: str, samples
     for file in files:
         split_info = file.split(".txt")[0].split("@")
         k += 1
-        phylumName = "".join(split_info[0:1])
+        phylumName = "".join(split_info[:1])
         count(phylum2Num, phylumName)
         for word in split_info:
             vocab_set.add(word)
@@ -195,7 +184,7 @@ def buildVocabularyAndAssignWeightByPhylum(folder: str, vocab_path: str, samples
     ratioNumPhylum = np.mean(np.array(list(sorted(list(phylum2Num.values()))))[2:-2])
     for file in files:
         split_info = file.split(".txt")[0].split("@")
-        phylumNum = phylum2Num["".join(split_info[0:1])]
+        phylumNum = phylum2Num["".join(split_info[:1])]
         if if_weight:
             samples_weight[file.split(".txt")[0]] = np.clip(ratioCal(phylumNum, ratioNumPhylum), 1.0, 3.0)
         else:
@@ -274,19 +263,14 @@ def sampleOneTimeFromContigSeqForTesting(
 def concatContigs(txtFilePath: str) -> List[str]:
     contigs = []
     with open(txtFilePath, "r") as rh:
-        for i, line in enumerate(rh):
-            contigs.append(line.strip("\n"))
-    new_seq = ""
-    for c in contigs:
-        new_seq += c
+        contigs.extend(line.strip("\n") for line in rh)
+    new_seq = "".join(contigs)
     return [new_seq]
 
 
 def approx(phyCount: int, baseNum: int, sampledNum: int) -> int:
     times = sampledNum // phyCount // baseNum
-    if times * phyCount * baseNum <= sampledNum:
-        return times + 1
-    return times
+    return times + 1 if times * phyCount * baseNum <= sampledNum else times
 
 
 def sampleFromContigsAndWriteFiles(
@@ -313,7 +297,9 @@ def sampleFromContigsAndWriteFiles(
             times += 0.5
         max_sample_times = int(base_sample_times * times)
         print(i, file, max_sample_times, phy2count[phyName], totalNum)
-        longestContigs = concatContigs(os.path.join(genome_folder, file))[0:max_sample_times]
+        longestContigs = concatContigs(os.path.join(genome_folder, file))[
+            :max_sample_times
+        ]
         cur_samp_times = 0
         while cur_samp_times < max_sample_times:
             for i, seq in enumerate(longestContigs):
@@ -326,7 +312,7 @@ def sampleFromContigsAndWriteFiles(
                         seq, max_data_length, cur_samp_times, max_sample_times, min_data_length
                     )
                 for s in samples:
-                    with open(os.path.join(out_path, str(index) + ".txt"), "w") as wh:
+                    with open(os.path.join(out_path, f"{str(index)}.txt"), "w") as wh:
                         wh.write(s + "\t" + file.split(".txt")[0] + "\n")
                     index += 1
                 if cur_samp_times >= max_sample_times:

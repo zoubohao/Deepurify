@@ -5,7 +5,6 @@ import stat
 import subprocess
 import logging
 import shutil
-import tempfile
 
 import numpy as np
 
@@ -18,7 +17,7 @@ def writeFasta(seqs, outputFile):
         fout = open(outputFile, 'w')
 
     for seqId, seq in seqs.items():
-        fout.write('>' + seqId + '\n')
+        fout.write(f'>{seqId}' + '\n')
         fout.write(seq + '\n')
     fout.close()
 
@@ -26,11 +25,7 @@ def writeFasta(seqs, outputFile):
 def readFasta(fastaFile, trimHeader=True):
     '''Read sequences from FASTA file.'''
     try:
-        if fastaFile.endswith('.gz'):
-            openFile = gzip.open
-        else:
-            openFile = open
-
+        openFile = gzip.open if fastaFile.endswith('.gz') else open
         seqs = {}
         for line in openFile(fastaFile, 'rt'):
             # skip blank lines
@@ -38,20 +33,17 @@ def readFasta(fastaFile, trimHeader=True):
                 continue
 
             if line[0] == '>':
-                if trimHeader:
-                    seqId = line[1:].split(None, 1)[0]
-                else:
-                    seqId = line[1:].rstrip()
+                seqId = line[1:].split(None, 1)[0] if trimHeader else line[1:].rstrip()
                 seqs[seqId] = []
             else:
-                seqs[seqId].append(line[0:-1])
+                seqs[seqId].append(line[:-1])
 
         for seqId, seq in seqs.items():
             seqs[seqId] = ''.join(seq)
     except Exception as e:
         print(e)
         logger = logging.getLogger('timestamp')
-        logger.error("Failed to process sequence file: {}".format(fastaFile))
+        logger.error(f"Failed to process sequence file: {fastaFile}")
         sys.exit(1)
 
     return seqs
@@ -61,7 +53,7 @@ def checkFileExists(inputFile):
     """Check if file exists."""
     if not os.path.exists(inputFile):
         logger = logging.getLogger('timestamp')
-        logger.error('Input file does not exists: ' + inputFile + '\n')
+        logger.error(f'Input file does not exists: {inputFile}' + '\n')
         sys.exit(1)
         
 
@@ -74,8 +66,8 @@ class ProdigalRunner():
         # make sure prodigal is installed
         self.checkForProdigal()
 
-        self.aaGeneFile = os.path.join(outDir, bin_profix + '.faa')
-        self.gffFile = os.path.join(outDir, bin_profix + '.gff')
+        self.aaGeneFile = os.path.join(outDir, f'{bin_profix}.faa')
+        self.gffFile = os.path.join(outDir, f'{bin_profix}.gff')
 
     def run(self, query):
 
@@ -83,22 +75,15 @@ class ProdigalRunner():
 
         # gather statistics about query file
         seqs = readFasta(prodigal_input)
-        totalBases = 0
-        for seqId, seq in seqs.items():
-            totalBases += len(seq)
-
+        totalBases = sum(len(seq) for seqId, seq in seqs.items())
         # call ORFs with different translation tables and select the one with the highest coding density
         tableCodingDensity = {}
         for translationTable in [4, 11]:
-            aaGeneFile = self.aaGeneFile + '.' + str(translationTable)
-            gffFile = self.gffFile + '.' + str(translationTable)
+            aaGeneFile = f'{self.aaGeneFile}.{str(translationTable)}'
+            gffFile = f'{self.gffFile}.{str(translationTable)}'
 
             # check if there is sufficient bases to calculate prodigal parameters
-            if totalBases < 100000:
-                procedureStr = 'meta'  # use best precalculated parameters
-            else:
-                procedureStr = 'single'  # estimate parameters from data
-                
+            procedureStr = 'meta' if totalBases < 100000 else 'single'
             cmd = ('prodigal -p %s -q -m -f gff -g %d -a %s -i %s > %s 2> /dev/null' % (procedureStr,
                                                                                         translationTable,
                                                                                         aaGeneFile,
@@ -116,14 +101,10 @@ class ProdigalRunner():
             # determine coding density
             prodigalParser = ProdigalGeneFeatureParser(gffFile)
 
-            codingBases = 0
-            for seqId, seq in seqs.items():
-                codingBases += prodigalParser.codingBases(seqId)
-
-            if totalBases != 0:
-                codingDensity = float(codingBases) / totalBases
-            else:
-                codingDensity = 0
+            codingBases = sum(
+                prodigalParser.codingBases(seqId) for seqId, seq in seqs.items()
+            )
+            codingDensity = float(codingBases) / totalBases if totalBases != 0 else 0
             tableCodingDensity[translationTable] = codingDensity
 
         # determine best translation table
@@ -131,15 +112,13 @@ class ProdigalRunner():
         if (tableCodingDensity[4] - tableCodingDensity[11] > 0.05) and tableCodingDensity[4] > 0.7:
             bestTranslationTable = 4
 
-        shutil.copyfile(self.aaGeneFile + '.' +
-                        str(bestTranslationTable), self.aaGeneFile)
-        shutil.copyfile(self.gffFile + '.' +
-                        str(bestTranslationTable), self.gffFile)
+        shutil.copyfile(f'{self.aaGeneFile}.{bestTranslationTable}', self.aaGeneFile)
+        shutil.copyfile(f'{self.gffFile}.{bestTranslationTable}', self.gffFile)
 
         # clean up redundant prodigal results
         for translationTable in [4, 11]:
-            os.remove(self.aaGeneFile + '.' + str(translationTable))
-            os.remove(self.gffFile + '.' + str(translationTable))
+            os.remove(f'{self.aaGeneFile}.{str(translationTable)}')
+            os.remove(f'{self.gffFile}.{str(translationTable)}')
 
         return bestTranslationTable
 
@@ -221,7 +200,7 @@ class ProdigalGeneFeatureParser():
                 self.genes[seqId] = {}
                 self.lastCodingBase[seqId] = 0
 
-            geneId = seqId + '_' + str(geneCounter)
+            geneId = f'{seqId}_{str(geneCounter)}'
             geneCounter += 1
 
             start = int(lineSplit[3])
@@ -250,7 +229,7 @@ class ProdigalGeneFeatureParser():
             return 0
 
         # set end to last coding base if not specified
-        if end == None:
+        if end is None:
             end = self.lastCodingBase[seqId]
 
         return np.sum(self.codingBaseMasks[seqId][start:end])

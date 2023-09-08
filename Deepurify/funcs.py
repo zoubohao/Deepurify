@@ -62,235 +62,233 @@ def runLabelFilterSplitBins(
         os.mkdir(annotOutputFolder)
     if os.path.exists(outputBinFolder) is False:
         os.mkdir(outputBinFolder)
-    wht = open(os.path.join(outputBinFolder, "time.txt"), "w")
-    startTime = time.clock_gettime(0)
-    if os.path.exists(taxoName2RepNormVecPath) is False:
-        if model_config is None:
-            model_config = {
-                "min_model_len": 1000,
-                "max_model_len": 1024 * 8,
-                "inChannel": 108,
-                "expand": 1.5,
-                "IRB_num": 3,
-                "head_num": 6,
-                "d_model": 738,
-                "num_GeqEncoder": 7,
-                "num_lstm_layers": 5,
-                "feature_dim": 1024,
-            }
-        taxo_tree = loadTaxonomyTree(taxoTreePath)
-        taxo_vocabulary = readVocabulary(taxoVocabPath)
-        mer3_vocabulary = readVocabulary(mer3Path)
-        mer4_vocabulary = readVocabulary(mer4Path)
-        model = SequenceCLIP(
-            max_model_len=model_config["max_model_len"],
-            in_channels=model_config["inChannel"],
-            taxo_dict_size=len(taxo_vocabulary),
-            vocab_3Mer_size=len(mer3_vocabulary),
-            vocab_4Mer_size=len(mer4_vocabulary),
-            phylum_num=getNumberOfPhylum(taxo_tree),
-            head_num=model_config["head_num"],
-            d_model=model_config["d_model"],
-            num_GeqEncoder=model_config["num_GeqEncoder"],
-            num_lstm_layer=model_config["num_lstm_layers"],
-            IRB_layers=model_config["IRB_num"],
-            expand=model_config["expand"],
-            feature_dim=model_config["feature_dim"],
-            drop_connect_ratio=0.0,
-            dropout=0.0,
-        )
-        print("Warning, DO NOT FIND taxoName2RepNormVecPath FILE. Start to build taxoName2RepNormVecPath file. ")
-        state = torch.load(modelWeightPath, map_location="cpu")
-        model.load_state_dict(state, strict=True)
-        with torch.no_grad():
-            buildTextsRepNormVector(taxo_tree, model, taxo_vocabulary, "cpu", taxoName2RepNormVecPath)
-    processList = []
-    error_queue = Queue()
-    if num_gpu == 0:
-        binFilesList = os.listdir(inputBinFolder)
-        totalNum = len(binFilesList)
-        nextIndex = 0
-        for i in range(num_threads_per_device):
-            if i != (num_threads_per_device) - 1:
-                cutFileLength = totalNum // num_threads_per_device + 1
-                curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
-                nextIndex += cutFileLength
-            else:
-                curDataFilesList = binFilesList[nextIndex:]
-            processList.append(
-                Process(
-                    target=labelBinsFolder,
-                    args=(
-                        inputBinFolder,
-                        annotOutputFolder,
-                        "cpu",
-                        modelWeightPath,
-                        mer3Path,
-                        mer4Path,
-                        taxoVocabPath,
-                        taxoTreePath,
-                        taxoName2RepNormVecPath,
-                        2,
-                        6,
-                        bin_suffix,
-                        curDataFilesList,
-                        2,
-                        overlapping_ratio,
-                        cutSeqLength,
-                        topkORgreedy,
-                        topK,
-                        error_queue,
-                        model_config,
-                    ),
-                )
+    with open(os.path.join(outputBinFolder, "time.txt"), "w") as wht:
+        startTime = time.clock_gettime(0)
+        if os.path.exists(taxoName2RepNormVecPath) is False:
+            if model_config is None:
+                model_config = {
+                    "min_model_len": 1000,
+                    "max_model_len": 1024 * 8,
+                    "inChannel": 108,
+                    "expand": 1.5,
+                    "IRB_num": 3,
+                    "head_num": 6,
+                    "d_model": 738,
+                    "num_GeqEncoder": 7,
+                    "num_lstm_layers": 5,
+                    "feature_dim": 1024,
+                }
+            taxo_tree = loadTaxonomyTree(taxoTreePath)
+            taxo_vocabulary = readVocabulary(taxoVocabPath)
+            mer3_vocabulary = readVocabulary(mer3Path)
+            mer4_vocabulary = readVocabulary(mer4Path)
+            model = SequenceCLIP(
+                max_model_len=model_config["max_model_len"],
+                in_channels=model_config["inChannel"],
+                taxo_dict_size=len(taxo_vocabulary),
+                vocab_3Mer_size=len(mer3_vocabulary),
+                vocab_4Mer_size=len(mer4_vocabulary),
+                phylum_num=getNumberOfPhylum(taxo_tree),
+                head_num=model_config["head_num"],
+                d_model=model_config["d_model"],
+                num_GeqEncoder=model_config["num_GeqEncoder"],
+                num_lstm_layer=model_config["num_lstm_layers"],
+                IRB_layers=model_config["IRB_num"],
+                expand=model_config["expand"],
+                feature_dim=model_config["feature_dim"],
+                drop_connect_ratio=0.0,
+                dropout=0.0,
             )
-            print("Processer {} has {} files.".format(i, len(curDataFilesList)))
-            processList[-1].start()
-    else:
-        assert sum(gpus_work_ratio) == 1.0
-        for b in batch_size_per_gpu:
-            assert b % num_threads_per_device == 0, f"The batch size number: {b} in batch_size_per_gpu can not divide num_threads_per_device: {num_threads_per_device}."
-        gpus = ["cuda:" + str(i) for i in range(num_gpu)]
-        binFilesList = os.listdir(inputBinFolder)
-        totalNum = len(binFilesList)
+            print("Warning, DO NOT FIND taxoName2RepNormVecPath FILE. Start to build taxoName2RepNormVecPath file. ")
+            state = torch.load(modelWeightPath, map_location="cpu")
+            model.load_state_dict(state, strict=True)
+            with torch.no_grad():
+                buildTextsRepNormVector(taxo_tree, model, taxo_vocabulary, "cpu", taxoName2RepNormVecPath)
+        processList = []
+        error_queue = Queue()
         nextIndex = 0
-        for i in range(num_gpu * num_threads_per_device):
-            if i != (num_gpu * num_threads_per_device) - 1:
-                cutFileLength = int(totalNum * gpus_work_ratio[i // num_threads_per_device] / num_threads_per_device + 0.0) + 1
-                curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
-                nextIndex += cutFileLength
-            else:
-                curDataFilesList = binFilesList[nextIndex:]
-            processList.append(
-                Process(
-                    target=labelBinsFolder,
-                    args=(
-                        inputBinFolder,
-                        annotOutputFolder,
-                        gpus[i // num_threads_per_device],
-                        modelWeightPath,
-                        mer3Path,
-                        mer4Path,
-                        taxoVocabPath,
-                        taxoTreePath,
-                        taxoName2RepNormVecPath,
-                        batch_size_per_gpu[i // num_threads_per_device] // num_threads_per_device,
-                        6,
-                        bin_suffix,
-                        curDataFilesList,
-                        2,
-                        overlapping_ratio,
-                        cutSeqLength,
-                        topkORgreedy,
-                        topK,
-                        error_queue,
-                        model_config,
-                    ),
+        if num_gpu == 0:
+            binFilesList = os.listdir(inputBinFolder)
+            totalNum = len(binFilesList)
+            for i in range(num_threads_per_device):
+                if i != (num_threads_per_device) - 1:
+                    cutFileLength = totalNum // num_threads_per_device + 1
+                    curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
+                    nextIndex += cutFileLength
+                else:
+                    curDataFilesList = binFilesList[nextIndex:]
+                processList.append(
+                    Process(
+                        target=labelBinsFolder,
+                        args=(
+                            inputBinFolder,
+                            annotOutputFolder,
+                            "cpu",
+                            modelWeightPath,
+                            mer3Path,
+                            mer4Path,
+                            taxoVocabPath,
+                            taxoTreePath,
+                            taxoName2RepNormVecPath,
+                            2,
+                            6,
+                            bin_suffix,
+                            curDataFilesList,
+                            2,
+                            overlapping_ratio,
+                            cutSeqLength,
+                            topkORgreedy,
+                            topK,
+                            error_queue,
+                            model_config,
+                        ),
+                    )
                 )
-            )
-            print("Processer {} has {} files in device {} .".format(
-                i, len(curDataFilesList), gpus[i // num_threads_per_device]))
-            processList[-1].start()
+                print(f"Processer {i} has {len(curDataFilesList)} files.")
+                processList[-1].start()
+        else:
+            assert sum(gpus_work_ratio) == 1.0
+            for b in batch_size_per_gpu:
+                assert b % num_threads_per_device == 0, f"The batch size number: {b} in batch_size_per_gpu can not divide num_threads_per_device: {num_threads_per_device}."
+            gpus = [f"cuda:{str(i)}" for i in range(num_gpu)]
+            binFilesList = os.listdir(inputBinFolder)
+            totalNum = len(binFilesList)
+            for i in range(num_gpu * num_threads_per_device):
+                if i != (num_gpu * num_threads_per_device) - 1:
+                    cutFileLength = int(totalNum * gpus_work_ratio[i // num_threads_per_device] / num_threads_per_device + 0.0) + 1
+                    curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
+                    nextIndex += cutFileLength
+                else:
+                    curDataFilesList = binFilesList[nextIndex:]
+                processList.append(
+                    Process(
+                        target=labelBinsFolder,
+                        args=(
+                            inputBinFolder,
+                            annotOutputFolder,
+                            gpus[i // num_threads_per_device],
+                            modelWeightPath,
+                            mer3Path,
+                            mer4Path,
+                            taxoVocabPath,
+                            taxoTreePath,
+                            taxoName2RepNormVecPath,
+                            batch_size_per_gpu[i // num_threads_per_device] // num_threads_per_device,
+                            6,
+                            bin_suffix,
+                            curDataFilesList,
+                            2,
+                            overlapping_ratio,
+                            cutSeqLength,
+                            topkORgreedy,
+                            topK,
+                            error_queue,
+                            model_config,
+                        ),
+                    )
+                )
+                print(
+                    f"Processer {i} has {len(curDataFilesList)} files in device {gpus[i // num_threads_per_device]} ."
+                )
+                processList[-1].start()
 
-    # error collection
-    queue_len = 0
-    n = len(processList)
-    while True:
-        if not error_queue.empty():
-            flag = error_queue.get()
-            queue_len += 1
-            if flag != None:
-                for p in processList:
-                    p.terminate()
-                    p.join()
-                print("\n")
-                print("SOME ERROR DURING INFERENCE CONTIG LINEAGE WITH CPU OR GPU.")
-                sys.exit(1)
-            if queue_len >= n:
-                for p in processList:
-                    p.join()
-                break
+        # error collection
+        queue_len = 0
+        n = len(processList)
+        while True:
+            if not error_queue.empty():
+                flag = error_queue.get()
+                queue_len += 1
+                if flag != None:
+                    for p in processList:
+                        p.terminate()
+                        p.join()
+                    print("\n")
+                    print("SOME ERROR DURING INFERENCE CONTIG LINEAGE WITH CPU OR GPU.")
+                    sys.exit(1)
+                if queue_len >= n:
+                    for p in processList:
+                        p.join()
+                    break
 
-    end1Time = time.clock_gettime(0)
+        end1Time = time.clock_gettime(0)
 
-    filterOutputFolder = os.path.join(tempFileOutFolder, "FilterOutput")
-    if os.path.exists(filterOutputFolder) is False:
-        os.mkdir(filterOutputFolder)
+        filterOutputFolder = os.path.join(tempFileOutFolder, "FilterOutput")
+        if os.path.exists(filterOutputFolder) is False:
+            os.mkdir(filterOutputFolder)
 
-    temp_folder_path = os.path.join(tempFileOutFolder, "CalledGenes")
-    if os.path.exists(temp_folder_path) is False:
-        os.mkdir(temp_folder_path)
+        temp_folder_path = os.path.join(tempFileOutFolder, "CalledGenes")
+        if os.path.exists(temp_folder_path) is False:
+            os.mkdir(temp_folder_path)
 
-    originalBinsCheckMPath = None
-    if self_evaluate is False:
+        originalBinsCheckMPath = None
+        if self_evaluate is False:
+            print("\n")
+            print("Starting Call Genes...")
+            callMarkerGenes(inputBinFolder, temp_folder_path, num_threads_call_genes, hmmModelPath, bin_suffix)
+            print("Starting Run CheckM...")
+            runCheckMsingle(inputBinFolder, os.path.join(filterOutputFolder, "original_checkm.txt"),
+                        num_threads_per_checkm * checkM_process_num, bin_suffix)
+            originalBinsCheckMPath = os.path.join(filterOutputFolder, "original_checkm.txt")
+
         print("\n")
-        print("Starting Call Genes...")
-        callMarkerGenes(inputBinFolder, temp_folder_path, num_threads_call_genes, hmmModelPath, bin_suffix)
+        print("Starting Filter Contaminations and Separate Bins...")
+        filterContaminationFolder(
+            annotOutputFolder,
+            inputBinFolder,
+            temp_folder_path,
+            filterOutputFolder,
+            bin_suffix,
+            ratio_cutoff,
+            acc_cutoff,
+            estimated_completeness_threshold,
+            seq_length_threshold,
+            originalBinsCheckMPath,
+            self_evaluate=self_evaluate
+        )
+
+        if self_evaluate:
+            print()
+            return
+
+        print("\n")
         print("Starting Run CheckM...")
-        runCheckMsingle(inputBinFolder, os.path.join(filterOutputFolder, "original_checkm.txt"),
-                    num_threads_per_checkm * checkM_process_num, bin_suffix)
-        originalBinsCheckMPath = os.path.join(filterOutputFolder, "original_checkm.txt")
+        runCheckMParall(filterOutputFolder, bin_suffix, checkM_process_num, num_threads_per_checkm)
 
-    print("\n")
-    print("Starting Filter Contaminations and Separate Bins...")
-    filterContaminationFolder(
-        annotOutputFolder,
-        inputBinFolder,
-        temp_folder_path,
-        filterOutputFolder,
-        bin_suffix,
-        ratio_cutoff,
-        acc_cutoff,
-        estimated_completeness_threshold,
-        seq_length_threshold,
-        originalBinsCheckMPath,
-        self_evaluate=self_evaluate
-    )
-
-    if self_evaluate:
-        print()
-        return
-
-    print("\n")
-    print("Starting Run CheckM...")
-    runCheckMParall(filterOutputFolder, bin_suffix, checkM_process_num, num_threads_per_checkm)
-
-    print("\n")
-    print("Starting Gather Result...")
-    wh = open(outputBinsMetaFilePath, "w")
-    binFilesList = os.listdir(inputBinFolder)
-    tN = len(binFilesList)
-    for i, binFileName in enumerate(binFilesList):
-        statusStr = "        " + "{} / {}".format(i + 1, tN)
-        cn = len(statusStr)
-        if cn < 50:
-            statusStr += "".join([" " for _ in range(50 - cn)])
-        statusStr += "\r"
-        sys.stderr.write("%s\r" % statusStr)
-        sys.stderr.flush()
-        _, suffix = os.path.splitext(binFileName)
-        if suffix[1:] == bin_suffix:
-            outInfo = findBestBinsAfterFiltering(
-                binFileName, inputBinFolder, tempFileOutFolder, originalBinsCheckMPath, outputBinFolder
-            )
-            for outName, qualityValues, annotName in outInfo:
-                wh.write(
-                    str(outName)
-                    + "\t"
-                    + str(qualityValues[0])
-                    + "\t"
-                    + str(qualityValues[1])
-                    + "\t"
-                    + str(qualityValues[2])
-                    + "\t"
-                    + annotName
-                    + "\n"
-                )
-    wh.close()
-    print("\n")
-    end2Time = time.clock_gettime(0)
-    wht.write(str(end1Time - startTime) + "\t" + str(end2Time - startTime) + "\n")
-    wht.close()
+        print("\n")
+        print("Starting Gather Result...")
+        with open(outputBinsMetaFilePath, "w") as wh:
+            binFilesList = os.listdir(inputBinFolder)
+            tN = len(binFilesList)
+            for i, binFileName in enumerate(binFilesList):
+                statusStr = f"        {i + 1} / {tN}"
+                cn = len(statusStr)
+                if cn < 50:
+                    statusStr += "".join([" " for _ in range(50 - cn)])
+                statusStr += "\r"
+                sys.stderr.write("%s\r" % statusStr)
+                sys.stderr.flush()
+                _, suffix = os.path.splitext(binFileName)
+                if suffix[1:] == bin_suffix:
+                    outInfo = findBestBinsAfterFiltering(
+                        binFileName, inputBinFolder, tempFileOutFolder, originalBinsCheckMPath, outputBinFolder
+                    )
+                    for outName, qualityValues, annotName in outInfo:
+                        wh.write(
+                            str(outName)
+                            + "\t"
+                            + str(qualityValues[0])
+                            + "\t"
+                            + str(qualityValues[1])
+                            + "\t"
+                            + str(qualityValues[2])
+                            + "\t"
+                            + annotName
+                            + "\n"
+                        )
+        print("\n")
+        end2Time = time.clock_gettime(0)
+        wht.write(str(end1Time - startTime) + "\t" + str(end2Time - startTime) + "\n")
 
 
 ### CheckM ###
@@ -322,7 +320,9 @@ def runCheckMsingle(binsFolder: str, checkmResFilePath: str, num_cpu: int, bin_s
                 print("############################################")
                 print("### Error Occured During CheckM Running  ###")
                 print("############################################")
-                raise RuntimeError("binFolder: {}, Checkm Result Path: {}".format(binsFolder, checkmResFilePath))
+                raise RuntimeError(
+                    f"binFolder: {binsFolder}, Checkm Result Path: {checkmResFilePath}"
+                )
             runCheckMsingle(binsFolder, checkmResFilePath, num_cpu, bin_suffix, repTime + 1)
     # res.wait()
     res.kill()

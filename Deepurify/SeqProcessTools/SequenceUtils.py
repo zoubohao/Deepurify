@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Dict, List, Tuple, TypeVar, Union
 
@@ -5,6 +6,22 @@ import numpy as np
 import torch
 
 Tensor = TypeVar("Tensor")  # The tensor of pytorch
+
+
+def sigmoid(z):
+    return 1/(1 + np.exp(-z))
+
+
+def getThre(comp, conta, taxoLevel): 
+    v1 = (conta - 10.) / 100.
+    v2 = (comp - 50.) / 100.
+    a = math.log(sigmoid(v1 * 0.9 + v2 * 0.3 - taxoLevel * 0.0125) + 1., 4.35)
+    thre = 1.0 - a
+    if thre > 0.77:
+        thre = 0.77
+    elif thre < 0.67:
+        thre = 0.67
+    return thre
 
 
 def ConvertTextToIndexTensor(vocabulary: Dict, labelText: List) -> Tensor:
@@ -93,7 +110,7 @@ def RandomReturnNegTaxoSamePhy(taxoTree: Dict, startPhylum: str, stopLevel: int,
                     name = child["Name"]
                 if name != truthInfo[stopLevel - 1]:
                     newChildren.append(child)
-            if len(newChildren) == 0:
+            if not newChildren:
                 return res.append(None)
             nextIndex = np.random.randint(len(newChildren))
             res.append(curTaxoTree["Name"])
@@ -103,10 +120,7 @@ def RandomReturnNegTaxoSamePhy(taxoTree: Dict, startPhylum: str, stopLevel: int,
                 res.append(newChildren[nextIndex]["Name"])
 
     inner(startPhyTree)
-    if res[-1] is None:
-        return None
-    else:
-        return res
+    return None if res[-1] is None else res
 
 
 def returnTaxoTextsInSameLevel(matchTextOuter: List, maxNum: int, taxoTree: Dict):
@@ -118,10 +132,10 @@ def returnTaxoTextsInSameLevel(matchTextOuter: List, maxNum: int, taxoTree: Dict
             for child in children:
                 if isinstance(child, Dict):
                     if child["Name"] != matchTextInner[-1]:
-                        results.append(matchTextOuter[0:-1] + [child["Name"]])
+                        results.append(matchTextOuter[:-1] + [child["Name"]])
                 else:
                     if child != matchTextInner[-1]:
-                        results.append(matchTextOuter[0:-1] + [child])
+                        results.append(matchTextOuter[:-1] + [child])
         else:
             for child in children:
                 if child["Name"] == matchTextInner[0]:
@@ -129,7 +143,7 @@ def returnTaxoTextsInSameLevel(matchTextOuter: List, maxNum: int, taxoTree: Dict
 
     inner(matchTextOuter, taxoTree)
     random.shuffle(results)
-    return results[0:maxNum]
+    return results[:maxNum]
 
 
 # Padding char "X"
@@ -258,33 +272,18 @@ def SeqCutToModelLengthIntervalAndAddNoisy(seq: str, min_model_len: int, max_mod
         cutSeq = seq
         if if_noisy is False:
             return cutSeq, 0
-        if randN <= 0.5:
-            return cutSeq, 0
-        noisySeqLen = int(curLength * (np.random.rand() * 0.2 + 0.2))
-        if noisySeqLen + curLength > max_model_len:
-            noisySeqLen = max_model_len - curLength
-        noisySeq = GenerateNoisySeq(noisySeqLen)
-        if np.random.rand() <= 0.5:
-            return cutSeq + noisySeq, 1
-        return noisySeq + cutSeq, 1
+        return _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_19(
+            randN, cutSeq, curLength, max_model_len
+        )
     # For seq length bigger than maximum length
     if np.random.rand() <= 0.4:  # 0.4 probability to have max_model_len
         startIndex = np.random.randint(0, oriSeqLen - max_model_len)
         cutSeq = seq[startIndex: startIndex + max_model_len]
         return cutSeq, 0
     if np.random.rand() <= 0.16666:  # 0.1 probability to have min_model_len
-        startIndex = np.random.randint(0, oriSeqLen - min_model_len)
-        cutSeq = seq[startIndex: startIndex + min_model_len]
-        randN = np.random.rand()
-        if if_noisy is False:
-            return cutSeq, 0
-        if randN <= 0.5:
-            return cutSeq, 0
-        noisySeqLen = int(min_model_len * (np.random.rand() * 0.25 + 0.25))
-        noisySeq = GenerateNoisySeq(noisySeqLen)
-        if np.random.rand() <= 0.5:
-            return cutSeq + noisySeq, 1
-        return noisySeq + cutSeq, 1
+        return _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_34(
+            oriSeqLen, min_model_len, seq, if_noisy
+        )
     # 0.5 probability to have sampled length
     startIndex = np.random.randint(0, oriSeqLen - min_model_len)
     curLength = int(np.clip(gmmModel.sample(1)[0][0], min_model_len, max_model_len)[0])
@@ -292,15 +291,44 @@ def SeqCutToModelLengthIntervalAndAddNoisy(seq: str, min_model_len: int, max_mod
     if if_noisy is False:
         return cutSeq, 0
     randN = np.random.rand()
+    return _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_19(
+        randN, cutSeq, curLength, max_model_len
+    )
+
+
+# TODO Rename this here and in `SeqCutToModelLengthIntervalAndAddNoisy`
+def _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_34(oriSeqLen, min_model_len, seq, if_noisy):
+    startIndex = np.random.randint(0, oriSeqLen - min_model_len)
+    cutSeq = seq[startIndex: startIndex + min_model_len]
+    randN = np.random.rand()
+    if if_noisy is False:
+        return cutSeq, 0
+    if randN <= 0.5:
+        return cutSeq, 0
+    noisySeqLen = int(min_model_len * (np.random.rand() * 0.25 + 0.25))
+    return _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_42(
+        noisySeqLen, cutSeq
+    )
+
+
+# TODO Rename this here and in `SeqCutToModelLengthIntervalAndAddNoisy`
+def _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_42(noisySeqLen, cutSeq):
+    noisySeq = GenerateNoisySeq(noisySeqLen)
+    if np.random.rand() <= 0.5:
+        return cutSeq + noisySeq, 1
+    return noisySeq + cutSeq, 1
+
+
+# TODO Rename this here and in `SeqCutToModelLengthIntervalAndAddNoisy`
+def _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_19(randN, cutSeq, curLength, max_model_len):
     if randN <= 0.5:
         return cutSeq, 0
     noisySeqLen = int(curLength * (np.random.rand() * 0.2 + 0.2))
     if noisySeqLen + curLength > max_model_len:
         noisySeqLen = max_model_len - curLength
-    noisySeq = GenerateNoisySeq(noisySeqLen)
-    if np.random.rand() <= 0.5:
-        return cutSeq + noisySeq, 1
-    return noisySeq + cutSeq, 1
+    return _extracted_from_SeqCutToModelLengthIntervalAndAddNoisy_42(
+        noisySeqLen, cutSeq
+    )
 
 
 def maskSeq(
@@ -343,8 +371,7 @@ def maskAndPredict(
     generateArry = np.arange(start=0, stop=seq_len - 10, step=4)
     maskedWordIndices = torch.from_numpy(np.random.choice(generateArry, size=maskedWordsNum, replace=False)).long()
     maskList = [maskedWordIndices]
-    for i in range(3):
-        maskList.append(maskedWordIndices + i + 1)
+    maskList.extend(maskedWordIndices + i + 1 for i in range(3))
     maskedWordIndices = torch.stack(maskList, dim=-1).flatten()
     # print("mask words legnth", maskedWordIndices)
 

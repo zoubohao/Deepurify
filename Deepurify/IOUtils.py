@@ -21,9 +21,8 @@ def readVocabulary(path: str) -> Dict:
 
 
 def loadTaxonomyTree(pkl_path: str) -> Dict:
-    rb = open(pkl_path, mode="rb")
-    tree = pickle.load(rb)
-    rb.close()
+    with open(pkl_path, mode="rb") as rb:
+        tree = pickle.load(rb)
     return tree
 
 
@@ -43,7 +42,7 @@ def readFasta(path: str) -> Dict[str, str]:
     with open(path, mode="r") as rh:
         for line in rh:
             curLine = line.strip("\n")
-            if ">" == curLine[0]:
+            if curLine[0] == ">":
                 if "plasmid" not in curContig.lower():
                     contig2Seq[curContig] = curSeq
                     curContig = curLine
@@ -60,7 +59,7 @@ def writeFasta(name2seq: Dict, writePath: str):
     with open(writePath, "w") as wh:
         for key, val in name2seq.items():
             if key[0] != ">":
-                wh.write(">" + key + "\n")
+                wh.write(f">{key}" + "\n")
             else:
                 wh.write(key + "\n")
             wh.write(val + "\n")
@@ -74,17 +73,15 @@ def convertFastaToTXT(fastPath: str, txtOutputPath: str):
 
 
 def readPickle(readPath: str) -> object:
-    rh = open(readPath, "rb")
-    obj = pickle.load(rh)
-    rh.close()
+    with open(readPath, "rb") as rh:
+        obj = pickle.load(rh)
     return obj
 
 
 def writePickle(writePath: str, obj: object) -> None:
-    wh = open(writePath, "wb")
-    pickle.dump(obj, wh, pickle.HIGHEST_PROTOCOL)
-    wh.flush()
-    wh.close()
+    with open(writePath, "wb") as wh:
+        pickle.dump(obj, wh, pickle.HIGHEST_PROTOCOL)
+        wh.flush()
 
 
 def readTXT(path: str) -> Dict:
@@ -109,10 +106,7 @@ def readAnnotResult(testBinPath: str) -> Tuple[Dict[str, str], Dict[str, List[fl
         for line in rh:
             info = line.strip("\n").split("\t")
             name2annote[info[0]] = info[1]
-            probs = []
-            for prob in info[2:]:
-                if prob != "":
-                    probs.append(float(prob))
+            probs = [float(prob) for prob in info[2:] if prob != ""]
             name2probsList[info[0]] = probs
     return name2annote, name2probsList
 
@@ -122,14 +116,14 @@ def writeAnnotResult(outputPath: str, name2annotated: Dict, name2maxList: Dict):
         for key, val in name2annotated.items():
             wh.write(key + "\t" + val + "\t")
             for prob in name2maxList[key]:
-                wh.write(str(prob)[0:10] + "\t")
+                wh.write(str(prob)[:10] + "\t")
             wh.write("\n")
 
 
 def readCheckMResultAndStat(
     checkMPath: str,
 ) -> Tuple[Dict[str, Tuple[float, float, str],], int, int, int]:
-    name2res = dict()
+    name2res = {}
     highQuality = 0
     mediumQuality = 0
     lowQuality = 0
@@ -137,26 +131,25 @@ def readCheckMResultAndStat(
         print("##################################################")
         print("### Error Occured During Reading CheckM Result ###")
         print("##################################################")
-        raise ValueError("CheckM result file {} not found...".format(checkMPath))
+        raise ValueError(f"CheckM result file {checkMPath} not found...")
     with open(checkMPath, "r") as rh:
-        for i, line in enumerate(rh):
+        for line in rh:
             if line[0] != "-" and "Marker lineage" not in line:
                 info = line.strip("\n").split(" ")
                 newInfo = []
                 for ele in info:
                     if ele != "":
                         if "\t" in ele:
-                            for c in ele.split("\t"):
-                                newInfo.append(c)
+                            newInfo.extend(iter(ele.split("\t")))
                         else:
                             newInfo.append(ele)
                 state = None
                 comp = float(newInfo[-3])
                 conta = float(newInfo[-2])
-                if 90 <= comp and conta <= 5:
+                if comp >= 90 and conta <= 5:
                     state = "HighQuality"
                     highQuality += 1
-                elif 50 <= comp and conta <= 10:
+                elif comp >= 50 and conta <= 10:
                     state = "MediumQuality"
                     mediumQuality += 1
                 else:
@@ -175,25 +168,21 @@ def readHMMFile(file_path: str, ratio_cutoff, acc_cutoff) -> Tuple[Dict[str, Lis
         for line in rh:
             if line[0] != "#":
                 info = line.strip("\n").split(" ")
-                newInfo = []
-                for ele in info:
-                    if ele != "":
-                        newInfo.append(ele)
+                newInfo = [ele for ele in info if ele != ""]
                 aligFrom = float(newInfo[17])
                 aligTo = float(newInfo[18])
                 seqLen = float(newInfo[2])
 
                 geneName = newInfo[4]
                 acc = float(newInfo[21])
-                contigName = ">" + "_".join(newInfo[0].split("_")[0:-1])
+                contigName = ">" + "_".join(newInfo[0].split("_")[:-1])
                 if (aligTo - aligFrom) / seqLen >= ratio_cutoff and acc >= acc_cutoff:
                     if geneName not in gene2contigNames:
                         gene2contigNames[geneName] = [contigName]
                     else:
                         gene2contigNames[geneName].append(contigName)
                     if contigName not in contigName2_gene2num:
-                        newDict = dict()
-                        newDict[geneName] = 1
+                        newDict = {geneName: 1}
                         contigName2_gene2num[contigName] = newDict
                     else:
                         curDict = contigName2_gene2num[contigName]
