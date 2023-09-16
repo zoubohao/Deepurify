@@ -11,9 +11,9 @@ Please independently install the following tools and ensure their proper functio
 2. **[hmmer](http://hmmer.org/download.html)** v.3.3.1 (Detecting conserved single-copy marker genes)
 3. **[CheckM](https://github.com/Ecogenomics/CheckM/wiki/)** v 1.2.2 (Evaluate the quality of MAGs)
 
- (**Note**: Installing the correct version of **pplacer** is essential to avoid errors when running CheckM. 
+**Note**: Installing the correct version of **pplacer** is essential to avoid errors when running CheckM. 
             Failure to do so may result in errors during execution CheckM. 
-            We utilized pplacer version "v1.1.alpha19" in our work.)
+            We utilized pplacer version "v1.1.alpha19" in our work.
 
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
@@ -88,10 +88,10 @@ Please run 'deepurify clean -h' for more details.
 - The purified MAGs.
 - time.txt 
 
-The elapsed running time of Deepurify is shown in two columns. The first column represents the time taken to infer the taxonomic lineage, while the second column represents the time taken to evaluate the results.
+The elapsed running time of Deepurify is shown in two columns. The first column represents the time (second) taken to infer the taxonomic lineage, while the second column represents the time (second) taken to evaluate the results.
 - MetaInfo.txt 
 
-This file contains the following columns: 1. MAG name (first column), 2. completeness of MAG (second column), 3. contamination (third column), 4. MAG quality (fourth column), and the 5. potential taxonomic lineage for MAG (fifth column).
+This file contains the following columns: 1. MAG name (first column), 2. completeness of MAG (second column), 3. contamination of MAG (third column), 4. MAG quality (fourth column), and the 5. potential taxonomic lineage for MAG (fifth column).
 
 ## Minimum System Requirements for Running Deepurify
 - System: Linux (>= Ubuntu 22.04.2 LTS)
