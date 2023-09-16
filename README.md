@@ -6,7 +6,7 @@
 
 ## Dependencies:
 Please independently install the following tools and ensure their proper functionality.
-```
+
 1. **[prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
 2. **[hmmer](http://hmmer.org/download.html)** v.3.3.1 (Detecting conserved single-copy marker genes)
 3. **[CheckM](https://github.com/Ecogenomics/CheckM/wiki/)** v 1.2.2 (Evaluate the quality of MAGs)
@@ -14,7 +14,6 @@ Please independently install the following tools and ensure their proper functio
  (**Note**: Installing the correct version of **pplacer** is essential to avoid errors when running CheckM. 
             Failure to do so may result in errors during execution CheckM. 
             We utilized pplacer version "v1.1.alpha19" in our work.)
-```
 
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
@@ -42,7 +41,7 @@ source .bashrc
 
 
 ## Running Deepurify
-1.  You can access the Deepurify through the **cleanMAGs** function.
+1.  You can run the Deepurify through the **cleanMAGs** function.
 ```
 from Deepurify.clean_func import cleanMAGs
 
@@ -66,7 +65,7 @@ if __name__ == "__main__":
 ```
 Please refer to the documentation of this function for more details.
 
-2.  You can access Deepurify through the following command:
+2.  You can run Deepurify through the following command:
 ```
 deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_threads_per_device 1
 ```
@@ -92,8 +91,7 @@ Please run 'deepurify clean -h' for more details.
 The elapsed running time of Deepurify is shown in two columns. The first column represents the time taken to infer the taxonomic lineage, while the second column represents the time taken to evaluate the results.
 - MetaInfo.txt 
 
-This file contains the following columns: MAG name (first column), completeness of MAG (second column), contamination (third column), MAG quality (fourth column), and the potential taxonomic lineage for MAG (fifth column).
-
+This file contains the following columns: 1. MAG name (first column), 2. completeness of MAG (second column), 3. contamination (third column), 4. MAG quality (fourth column), and the 5. potential taxonomic lineage for MAG (fifth column).
 
 ## Minimum System Requirements for Running Deepurify
 - System: Linux (>= Ubuntu 22.04.2 LTS)
