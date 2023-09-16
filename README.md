@@ -10,10 +10,10 @@ Please independently install the following tools and ensure their proper functio
 1. **[prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
 2. **[hmmer](http://hmmer.org/download.html)** v.3.3.1 (Detecting conserved single-copy marker genes)
 3. **[CheckM](https://github.com/Ecogenomics/CheckM/wiki/)** v 1.2.2 (Evaluate the quality of MAGs)
-
 **Note**: Installing the correct version of **pplacer** is essential to avoid errors when running CheckM. 
             Failure to do so may result in errors during execution CheckM. 
             We utilized pplacer version "v1.1.alpha19" in our work.
+4. **[Pytorch](https://pytorch.org/)** v2.0.1 + cu118 (GPU version)
 
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
