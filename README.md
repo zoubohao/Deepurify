@@ -6,12 +6,15 @@
 
 ## Dependencies:
 Please independently install the following tools and ensure their proper functionality.
-- **[prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
-- **[hmmer](http://hmmer.org/download.html)** v.3.3.1 (Detecting conserved single-copy marker genes)
-- **[CheckM](https://github.com/Ecogenomics/CheckM/wiki/)** v 1.2.2 (Evaluate the quality of MAGs)
+```
+1. **[prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
+2. **[hmmer](http://hmmer.org/download.html)** v.3.3.1 (Detecting conserved single-copy marker genes)
+3. **[CheckM](https://github.com/Ecogenomics/CheckM/wiki/)** v 1.2.2 (Evaluate the quality of MAGs)
+
  (**Note**: Installing the correct version of **pplacer** is essential to avoid errors when running CheckM. 
             Failure to do so may result in errors during execution CheckM. 
             We utilized pplacer version "v1.1.alpha19" in our work.)
+```
 
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
@@ -39,7 +42,7 @@ source .bashrc
 
 
 ## Running Deepurify
-- You can access the Deepurify through the **cleanMAGs** function.
+1.  You can access the Deepurify through the **cleanMAGs** function.
 ```
 from Deepurify.clean_func import cleanMAGs
 
@@ -63,7 +66,7 @@ if __name__ == "__main__":
 ```
 Please refer to the documentation of this function for more details.
 
-- You can access Deepurify through the following command:
+2.  You can access Deepurify through the following command:
 ```
 deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_threads_per_device 1
 ```
@@ -84,10 +87,12 @@ Please run 'deepurify clean -h' for more details.
 
 ## Files in output directory
 - The purified MAGs.
-- time.txt (The elapsed running time of Deepurify is shown in two columns. The first column represents the time taken to infer the taxonomic lineage, 
-            while the second column represents the time taken to evaluate the results).
-- MetaInfo.txt (This file contains the following columns: MAG name (first column), completeness of MAG (second column), contamination (third column), 
-                MAG quality (fourth column), and the potential taxonomic lineage for MAG (fifth column).)
+- time.txt 
+
+The elapsed running time of Deepurify is shown in two columns. The first column represents the time taken to infer the taxonomic lineage, while the second column represents the time taken to evaluate the results.
+- MetaInfo.txt 
+
+This file contains the following columns: MAG name (first column), completeness of MAG (second column), contamination (third column), MAG quality (fourth column), and the potential taxonomic lineage for MAG (fifth column).
 
 
 ## Minimum System Requirements for Running Deepurify
@@ -95,6 +100,7 @@ Please run 'deepurify clean -h' for more details.
 - CPU: No restriction.
 - RAM: > 40GB (Running CheckM with using the full reference genome tree required approximately 40 GB of memory.)
 - GPU: The GPU memory must be equal to or greater than 3GB.
+
 This system can run the configuration in the **"Running Deepurify"** section.
 
 
@@ -103,4 +109,5 @@ This system can run the configuration in the **"Running Deepurify"** section.
 - CPU: AMD EPYC 7543 32 cores 64 threads.
 - RAM: 256GB
 - GPU: Double GTX-3090 24GB
+
 This system can run the configuration in the main.py file.
