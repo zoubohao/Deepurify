@@ -104,7 +104,7 @@ This file contains the following columns:
 ## Minimum System Requirements for Running Deepurify
 - System: Linux (>= Ubuntu 22.04.2 LTS)
 - CPU: No restriction.
-- RAM: > 40GB (Running CheckM with using the full reference genome tree required approximately 40 GB of memory.)
+- RAM: > 45GB (Running CheckM with using the full reference genome tree required approximately 40 GB of memory.)
 - GPU: The GPU memory must be equal to or greater than 3GB.
 
 This system can run the configuration in the **"Running Deepurify"** section.
