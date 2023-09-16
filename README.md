@@ -98,7 +98,7 @@ This file contains the following columns:
 1. MAG name (first column), 
 2. completeness of MAG (second column), 
 3. contamination of MAG (third column), 
-4. MAG quality (fourth column), and the 
+4. MAG quality (fourth column),
 5. potential taxonomic lineage for MAG (fifth column).
 
 ## Minimum System Requirements for Running Deepurify
