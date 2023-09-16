@@ -46,8 +46,8 @@ source .bashrc
 from Deepurify.clean_func import cleanMAGs
 
 if __name__ == "__main__":
-    inputBinFolderPath = "/path/of/bins/folder/"
-    outputBinFolderPath = "/path/of/output/folder/"
+    inputBinFolderPath = "./demo_input/"
+    outputBinFolderPath = "./demo_output/"
     
     cleanMAGs(
         input_bin_folder_path=inputBinFolderPath, # Input directory containing MAGs
@@ -67,9 +67,9 @@ Please refer to the documentation of this function for more details.
 
 2.  You can run Deepurify through the following command:
 ```
-deepurify clean  -i /path/to/your/mags/ -o /path/to/your/output/ --bin_suffix fa --gpu_num 1 --num_threads_per_device 1
+deepurify clean  -i ./demo_input/ -o ./demo_output/ --bin_suffix fa --gpu_num 1 --num_threads_per_device 1
 ```
----------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------
 ```
 arguments:
     -i --input_path               Input directory containing MAGs
@@ -85,13 +85,21 @@ Please run 'deepurify clean -h' for more details.
 
 
 ## Files in output directory
-- The purified MAGs.
-- time.txt 
+- #### The purified MAGs.
+- #### time.txt 
+The elapsed running time of Deepurify is shown in two columns. 
 
-The elapsed running time of Deepurify is shown in two columns. The first column represents the time (second) taken to infer the taxonomic lineage, while the second column represents the time (second) taken to evaluate the results.
-- MetaInfo.txt 
+1. The first column represents the time (seconds) taken to infer the taxonomic lineage.
+2. The second column represents the time (seconds) taken to evaluate the results.
 
-This file contains the following columns: 1. MAG name (first column), 2. completeness of MAG (second column), 3. contamination of MAG (third column), 4. MAG quality (fourth column), and the 5. potential taxonomic lineage for MAG (fifth column).
+- #### MetaInfo.txt 
+This file contains the following columns: 
+
+1. MAG name (first column), 
+2. completeness of MAG (second column), 
+3. contamination of MAG (third column), 
+4. MAG quality (fourth column), and the 
+5. potential taxonomic lineage for MAG (fifth column).
 
 ## Minimum System Requirements for Running Deepurify
 - System: Linux (>= Ubuntu 22.04.2 LTS)
