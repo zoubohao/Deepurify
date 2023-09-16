@@ -62,6 +62,9 @@ def cli():
         required=True,
         help="The bin suffix of MAG files.",
         type=str)
+
+
+    ### optional ###
     clean_parser.add_argument(
         "--gpu_num",
         default=1,
@@ -73,11 +76,11 @@ def cli():
     )
     clean_parser.add_argument(
         "--batch_size_per_gpu",
-        default=2,
+        default=1,
         help="""The batch size per GPU determines the number of sequences that will be loaded onto each GPU. 
         This parameter is only applicable if the --gpu_num option is set to a value greater than 0. 
-        The default value is 2, meaning that two sequences will be loaded per GPU batch.
-        The batch size for CPU is 2.
+        The default value is 1, meaning that one sequences will be loaded per GPU batch.
+        The batch size for CPU is 1.
         """,
         type=int)
     clean_parser.add_argument(
@@ -91,8 +94,6 @@ def cli():
         The --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per thread.
         """
     )
-
-    ### optional ###
     clean_parser.add_argument(
         "--overlapping_ratio",
         default=0.5,

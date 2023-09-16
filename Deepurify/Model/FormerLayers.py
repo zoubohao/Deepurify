@@ -24,7 +24,7 @@ class FeedForward(nn.Module):
         return x2
 
 
-class ConvFeedForward(nn.Module):
+class InvertedResidualBlcok(nn.Module):
     def __init__(self, d_model: int, expand: float):
         super().__init__()
         in_cha = int(d_model * expand)
@@ -41,7 +41,7 @@ class ConvFeedForward(nn.Module):
         return x
 
 
-class ConvAttention(nn.Module):
+class SpatialConv(nn.Module):
     def __init__(self, in_channels: int):
         super().__init__()
         in_cha = 45
@@ -56,12 +56,12 @@ class ConvAttention(nn.Module):
         return self.conv2(self.conv1(self.conv0(x)))
 
 
-class Conv3ChannelAttention(nn.Module):
+class SpatialAttention(nn.Module):
     def __init__(self, in_channels: int) -> None:
         super().__init__()
-        self.conv0 = ConvAttention(in_channels)
-        self.conv1 = ConvAttention(in_channels)
-        self.conv2 = ConvAttention(in_channels)
+        self.conv0 = SpatialConv(in_channels)
+        self.conv1 = SpatialConv(in_channels)
+        self.conv2 = SpatialConv(in_channels)
 
     def forward(self, x):
         """
@@ -74,7 +74,7 @@ class Conv3ChannelAttention(nn.Module):
         return torch.sum(stacked, dim=1, keepdim=True)
 
 
-class RowWiseGateSelfAttention(nn.Module):
+class TensorRowWiseGateSelfAttention(nn.Module):
     def __init__(self, h, d_model, pairDim=128, dropout=0.1):
         super().__init__()
         assert d_model % h == 0, ValueError("Error with d_model and the number of heads.")
@@ -89,7 +89,7 @@ class RowWiseGateSelfAttention(nn.Module):
         self.ln2 = nn.LayerNorm(pairDim, eps=1e-6)
         self.q_linear = nn.Linear(d_model // 3, d_model // 3)
         self.v_linear = nn.Linear(d_model // 3, d_model // 3)
-        self.conv3d = Conv3ChannelAttention(h)
+        self.conv3d = SpatialAttention(h)
         self.k_linear = nn.Linear(d_model // 3, d_model // 3)
         self.gate_linear = nn.Linear(d_model // 3, d_model // 3)
         self.pair_linear = nn.Linear(pairDim, h)
@@ -135,7 +135,7 @@ class RowWiseGateSelfAttention(nn.Module):
         return self.dropout2(self.out(h_outs)) + ori_x * self.g, self.pair_linear_rev(rawScoreMean)
 
 
-class ColWiseGateSelfAttention(nn.Module):
+class TensorColWiseGateSelfAttention(nn.Module):
     def __init__(self, h, d_model, dropout=0.1):
         super().__init__()
         assert d_model % h == 0, ValueError("Error with d_model and the number of heads.")
@@ -179,7 +179,7 @@ class ColWiseGateSelfAttention(nn.Module):
         return self.dropout(self.out(h_outs)) + ori_x * self.g
 
 
-class OuterProductPair(nn.Module):
+class BlockAttentionUpdate(nn.Module):
     def __init__(self, d_model, pairDim=128):
         super().__init__()
         assert d_model % 3 == 0, ValueError("The d_model does not divide 3.")
@@ -207,14 +207,14 @@ class OuterProductPair(nn.Module):
         return self.trans2(rawScore)
 
 
-class Gseqformer(nn.Module):
+class FormerBlock(nn.Module):
     def __init__(self, expand, h, d_model, pairDim, dropout, if_last_layer=False):
         super().__init__()
         # print("The dimension of model is: ", d_model)
-        self.conv = ConvFeedForward(d_model, expand)
-        self.outPair = OuterProductPair(d_model, pairDim)
-        self.rowWiseAtten = RowWiseGateSelfAttention(h, d_model, pairDim, dropout)
-        self.colWiseAtten = ColWiseGateSelfAttention(h, d_model, dropout)
+        self.conv = InvertedResidualBlcok(d_model, expand)
+        self.outPair = BlockAttentionUpdate(d_model, pairDim)
+        self.rowWiseAtten = TensorRowWiseGateSelfAttention(h, d_model, pairDim, dropout)
+        self.colWiseAtten = TensorColWiseGateSelfAttention(h, d_model, dropout)
         self.ffw = FeedForward(d_model, dropout)
         self.ga = nn.parameter.Parameter(data=torch.ones(1), requires_grad=True)
         self.gc = nn.parameter.Parameter(data=torch.ones(1), requires_grad=True)
@@ -252,16 +252,16 @@ class Gseqformer(nn.Module):
             return self.ffw(torch.matmul(pairXMean, x)) + ffwOri * self.gf
 
 
-class GseqformerEncoder(nn.Module):
+class FormerEncoder(nn.Module):
     def __init__(self, expand, h, d_model, pairDim, dropout, layers):
         super().__init__()
         self.layers = layers
         self.pairDim = pairDim
         block = [
-            Gseqformer(expand, h, d_model, pairDim, dropout, False)
+            FormerBlock(expand, h, d_model, pairDim, dropout, False)
             for _ in range(layers - 1)
         ]
-        block.append(Gseqformer(expand, h, d_model, pairDim, dropout, True))
+        block.append(FormerBlock(expand, h, d_model, pairDim, dropout, True))
         self.module_list = nn.ModuleList(block)
 
     def forward(self, x):

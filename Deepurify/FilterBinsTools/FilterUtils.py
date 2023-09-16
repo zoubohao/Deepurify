@@ -28,7 +28,7 @@ def allocate(
     replication_times_threashold: int,
 ) -> None:
     if not splitContigSetList:
-        _extracted_from_allocate_8(info, splitContigSetList, splitRecordGenes)
+        allocate_new_set(info, splitContigSetList, splitRecordGenes)
     else:
         insertIndex = None
         for i, record in enumerate(splitRecordGenes):
@@ -51,10 +51,10 @@ def allocate(
                 else:
                     curRecord[gene] += num
         else:
-            _extracted_from_allocate_8(info, splitContigSetList, splitRecordGenes)
+            allocate_new_set(info, splitContigSetList, splitRecordGenes)
 
 
-def _extracted_from_allocate_8(info, splitContigSetList, splitRecordGenes):
+def allocate_new_set(info, splitContigSetList, splitRecordGenes):
     curSet = {info[0]}
     splitContigSetList.append(curSet)
     curDict = {}
@@ -204,7 +204,7 @@ def filterContaminationOneBin(
     estimate_completeness_threshold: float,
     seq_length_threshold: int,
     originalBinsCheckMPath,
-    self_evaluate=False
+    simulated_MAG=False
 ) -> None:
     assert 1 <= taxoLevel <= 6, ValueError("The taxoLevel must between 1 to 6.")
     assert 0.4 <= ratio_cutoff, ValueError("The ratio_cutoff value must bigger than 0.4")
@@ -251,7 +251,7 @@ def filterContaminationOneBin(
     annot2binNames = {}
     writeFasta(filtedContigName2seq, os.path.join(outputFastaFolder, binName))
 
-    if self_evaluate:
+    if simulated_MAG:
         return
 
     # using SCGs to exclude external contigs.
@@ -310,7 +310,7 @@ def subProcessFilter(
     estimate_completeness_threshold: float,
     seq_length_threshold: int,
     originalBinsCheckMPath,
-    self_evaluate=False
+    simulated_MAG=False
 ):
     binFiles = os.listdir(oriBinFolder)
     N = len(binFiles)
@@ -338,7 +338,7 @@ def subProcessFilter(
             estimate_completeness_threshold=estimate_completeness_threshold,
             seq_length_threshold=seq_length_threshold,
             originalBinsCheckMPath = originalBinsCheckMPath,
-            self_evaluate=self_evaluate
+            simulated_MAG=simulated_MAG
         )
 
 
@@ -353,7 +353,7 @@ def filterContaminationFolder(
     estimate_completeness_threshold: float,
     seq_length_threshold: int,
     originalBinsCheckMPath: Union[str, None],
-    self_evaluate=False
+    simulated_MAG=False
 ):
     for i in range(6):
         if os.path.exists(os.path.join(outputFolder, index2Taxo[i + 1])) is False:
@@ -375,7 +375,7 @@ def filterContaminationFolder(
                     estimate_completeness_threshold,
                     seq_length_threshold,
                     originalBinsCheckMPath,
-                    self_evaluate,
+                    simulated_MAG,
                 ),
             )
         )

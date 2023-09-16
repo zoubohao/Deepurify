@@ -9,19 +9,6 @@ import shutil
 import numpy as np
 
 
-def writeFasta(seqs, outputFile):
-    '''write sequences to FASTA file'''
-    if outputFile.endswith('.gz'):
-        fout = gzip.open(outputFile, 'wb')
-    else:
-        fout = open(outputFile, 'w')
-
-    for seqId, seq in seqs.items():
-        fout.write(f'>{seqId}' + '\n')
-        fout.write(seq + '\n')
-    fout.close()
-
-
 def readFasta(fastaFile, trimHeader=True):
     '''Read sequences from FASTA file.'''
     try:

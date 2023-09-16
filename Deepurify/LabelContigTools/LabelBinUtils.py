@@ -11,7 +11,7 @@ import torch.nn as nn
 from Deepurify.IOUtils import (getNumberOfPhylum, loadTaxonomyTree, readFasta,
                                readPickle, readVocabulary, writeAnnotResult,
                                writePickle)
-from Deepurify.Model.EncoderModels import SequenceCLIP
+from Deepurify.Model.EncoderModels import DeepurifyModel
 from Deepurify.SeqProcessTools.SequenceUtils import (
     ConvertSeqToImageTensorMoreFeatures, ConvertTextToIndexTensor)
 
@@ -796,7 +796,7 @@ def labelBinsFolder(
                 "num_lstm_layers": 5,
                 "feature_dim": 1024,
             }
-        model = SequenceCLIP(
+        model = DeepurifyModel(
             max_model_len=model_config["max_model_len"],
             in_channels=model_config["inChannel"],
             taxo_dict_size=len(taxo_vocabulary),

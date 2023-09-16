@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from Deepurify.DataTools.DataUtils import readVocabulary
-from Deepurify.Model.EncoderModels import SequenceCLIP
+from Deepurify.Model.EncoderModels import DeepurifyModel
 from Deepurify.Model.Loss import FocalCrossEntropyLoss
 from Deepurify.SeqProcessTools.SequenceDataset import SequenceSampledTestDataset, SequenceTrainingDataset
 from Deepurify.TrainTools.TrainUtils import test, train
@@ -100,7 +100,7 @@ def config_train(fileConfig=None, modelConfig=None, trainingConfig=None):
     innerThre = math.cos(angleAroundAnchor - gapAngle)
     outerThre = math.cos(angleAroundAnchor + gapAngle)
 
-    model = SequenceCLIP(
+    model = DeepurifyModel(
         max_model_len=modelConfig["max_model_len"],
         in_channels=modelConfig["inChannel"],
         taxo_dict_size=len(taxo_vocabulary),

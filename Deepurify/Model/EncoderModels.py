@@ -1,11 +1,11 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from Deepurify.Model.Convolutions import CompressConvolution, Permute
-from Deepurify.Model.FormerLayers import GseqformerEncoder
+from Deepurify.Model.Convolutions import MEfficientNet, Permute
+from Deepurify.Model.FormerLayers import FormerEncoder
 
 
-class VisionEncoder(nn.Module):
+class GseqFormer(nn.Module):
     def __init__(
         self,
         in_channels,
@@ -22,10 +22,10 @@ class VisionEncoder(nn.Module):
     ):
         super().__init__()
         self.d_model = d_model
-        self.compressConv = CompressConvolution(
+        self.compressConv = MEfficientNet(
             in_channels, out_channels=d_model, layers=IRB_layers, expand=expand, drop_connect_rate=drop_connect_ratio
         )
-        self.gSeqEncoder = GseqformerEncoder(expand, head_num, d_model, pairDim=64,
+        self.gSeqEncoder = FormerEncoder(expand, head_num, d_model, pairDim=64,
                                              dropout=dropout, layers=num_GeqEncoder)
         # 256
         self.conv16_32 = nn.Conv1d(256, 320, kernel_size=3, stride=2, padding=1)
@@ -107,7 +107,7 @@ class VisionEncoder(nn.Module):
         return self.forward_features(x, selectMask)
 
 
-class TextEncoder(nn.Module):
+class TaxonomicEncoder(nn.Module):
     def __init__(self, dict_size, embedding_dim, num_labels=None, feature_dim=1024, num_layers=4, dropout=0.1):
         super().__init__()
         self.embedding = nn.Embedding(num_embeddings=dict_size, embedding_dim=embedding_dim, padding_idx=0)
@@ -129,7 +129,7 @@ class TextEncoder(nn.Module):
         return fea if self.num_labels is None else self.fc(fea)
 
 
-class SequenceCLIP(nn.Module):
+class DeepurifyModel(nn.Module):
     def __init__(
         self,
         max_model_len: int,
@@ -150,10 +150,10 @@ class SequenceCLIP(nn.Module):
         register_hook=False
     ):
         super().__init__()
-        self.visionEncoder = VisionEncoder(
+        self.visionEncoder = GseqFormer(
             in_channels, None, head_num, d_model, num_GeqEncoder, IRB_layers, expand, feature_dim, drop_connect_ratio, dropout, register_hook
         )
-        self.textEncoder = TextEncoder(taxo_dict_size, d_model, None, feature_dim, num_lstm_layer, dropout)
+        self.textEncoder = TaxonomicEncoder(taxo_dict_size, d_model, None, feature_dim, num_lstm_layer, dropout)
         self.vocab3MerEmb = nn.Embedding(vocab_3Mer_size, 16, padding_idx=0)
         self.vocab4MerEmb = nn.Embedding(vocab_4Mer_size, 32, padding_idx=0)
         self.postionalEmb = nn.Parameter(nn.init.kaiming_normal_(

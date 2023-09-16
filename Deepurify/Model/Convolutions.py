@@ -64,7 +64,7 @@ class SqueezeFeedForward(nn.Module):
         return self.act(self.linear1(torch.flatten(self.avgpool(x), start_dim=1)))
 
 
-class ODConv1d(nn.Module):
+class OmniDynamicConv1d(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, num_weight: int, kernel_size: int, stride: int, padding: int):
         super().__init__()
         self.stride = stride
@@ -95,12 +95,12 @@ class ODConv1d(nn.Module):
         return torch.cat(list(map(attention, kernel, inc, outc, nums_weight, x)), dim=0)
 
 
-class Block(nn.Module):
+class UnitBlock(nn.Module):
     def __init__(self, in_channels, out_channels, expansion_factor=2, drop_connect_rate=0.25):
         super().__init__()
         mid_cha = int(in_channels * expansion_factor)
         self.expension = nn.Sequential(
-            ODConv1d(in_channels, mid_cha, num_weight=5, kernel_size=3, stride=1, padding=1),
+            OmniDynamicConv1d(in_channels, mid_cha, num_weight=5, kernel_size=3, stride=1, padding=1),
             Permute(),
             nn.LayerNorm(mid_cha, eps=1e-6),
             Permute(),
@@ -126,7 +126,7 @@ class Bottleneck(nn.Module):
         super().__init__()
         blocks = [DownSample(in_channels, out_channels)]
         blocks.extend(
-            Block(out_channels, out_channels, expand, drop_connect_rate)
+            UnitBlock(out_channels, out_channels, expand, drop_connect_rate)
             for _ in range(layers)
         )
         self.bottleNeck = nn.Sequential(*blocks)
@@ -135,7 +135,7 @@ class Bottleneck(nn.Module):
         return self.bottleNeck(x)
 
 
-class CompressConvolution(nn.Module):
+class MEfficientNet(nn.Module):
     def __init__(self, in_channels, out_channels, layers=2, expand=4, drop_connect_rate=0.25):
         super().__init__()
         self.conv1 = Bottleneck(in_channels, 128, 1, expand=expand, drop_connect_rate=drop_connect_rate)
@@ -153,10 +153,3 @@ class CompressConvolution(nn.Module):
         x8 = self.b2(x4)
         x16 = self.b3(x8)
         return x16, x8, x4, x2
-
-
-if __name__ == "__main__":
-    x = torch.randn([5, 108, 256 * 5])
-    m = CompressConvolution(108, 384)
-    y = m(x)
-    print(y)

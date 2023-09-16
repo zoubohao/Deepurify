@@ -16,12 +16,12 @@ class Tree:
         self.qualityValues = qualityValues
         self.core = core
         self.canSelect = True
-        self.childern = []
+        self.children = []
         self.pathBests = []
 
     def insert(self, binName: str, annotName: str, qualityValues: Tuple[float, float, str], core: List[bool]):
         node = Tree(binName, annotName, qualityValues, core)
-        self.childern.append(node)
+        self.children.append(node)
         return node
 
 
@@ -84,7 +84,7 @@ def buildTreeForBin(
 
 def dfsFindBestBins(
         tree: Tree):
-    curChildren = tree.childern
+    curChildren = tree.children
     if len(curChildren) == 0:
         tree.pathBests.append((tree.qualityValues, tree))
     else:
@@ -124,8 +124,8 @@ def findCoreOutput(
         node: Tree,
         res: List):
     res.append((getScoreForLowquality(node.qualityValues), node))
-    if len(node.childern) != 0:
-        for child in node.childern:
+    if len(node.children) != 0:
+        for child in node.children:
             if child.core[-1] is True:
                 findCoreOutput(child, res)
 
@@ -146,7 +146,7 @@ def findBestBinsAfterFiltering(
     # find best bins for this bin
     dfsFindBestBins(root)
     # assign the taxonomy lineage for the root node
-    for child in root.childern:
+    for child in root.children:
         if child.core[-1] is True:
             root.annotName = child.annotName
             break

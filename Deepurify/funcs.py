@@ -14,7 +14,7 @@ from Deepurify.IOUtils import (getNumberOfPhylum, loadTaxonomyTree, readCheckMRe
                                readVocabulary, writePickle)
 from Deepurify.LabelContigTools.LabelBinUtils import (buildTextsRepNormVector,
                                                       labelBinsFolder)
-from Deepurify.Model.EncoderModels import SequenceCLIP
+from Deepurify.Model.EncoderModels import DeepurifyModel
 from Deepurify.SelectMAGsTools.SelectionUitls import findBestBinsAfterFiltering
 from Deepurify.CallGenesTools.CallGenesUtils import splitListEqually
 
@@ -39,7 +39,7 @@ def runLabelFilterSplitBins(
     batch_size_per_gpu: List[float],
     num_threads_per_device: int,
     overlapping_ratio: float,
-    cutSeqLength: int,
+    cut_seq_length: int,
     num_threads_call_genes: int,
     ratio_cutoff: float,
     acc_cutoff: float,
@@ -50,7 +50,7 @@ def runLabelFilterSplitBins(
     topkORgreedy: str,
     topK: int,
     model_config: Dict,
-    self_evaluate=False
+    simulated_MAG=False
 ):
     print("Estimating Taxonomic Similarity by Labeling Lineage for Each Contig in the MAG.")
     print()
@@ -82,7 +82,7 @@ def runLabelFilterSplitBins(
             taxo_vocabulary = readVocabulary(taxoVocabPath)
             mer3_vocabulary = readVocabulary(mer3Path)
             mer4_vocabulary = readVocabulary(mer4Path)
-            model = SequenceCLIP(
+            model = DeepurifyModel(
                 max_model_len=model_config["max_model_len"],
                 in_channels=model_config["inChannel"],
                 taxo_dict_size=len(taxo_vocabulary),
@@ -136,7 +136,7 @@ def runLabelFilterSplitBins(
                             curDataFilesList,
                             2,
                             overlapping_ratio,
-                            cutSeqLength,
+                            cut_seq_length,
                             topkORgreedy,
                             topK,
                             error_queue,
@@ -179,7 +179,7 @@ def runLabelFilterSplitBins(
                             curDataFilesList,
                             2,
                             overlapping_ratio,
-                            cutSeqLength,
+                            cut_seq_length,
                             topkORgreedy,
                             topK,
                             error_queue,
@@ -188,7 +188,7 @@ def runLabelFilterSplitBins(
                     )
                 )
                 print(
-                    f"Processer {i} has {len(curDataFilesList)} files in device {gpus[i // num_threads_per_device]} ."
+                    f"Processer {i} has {len(curDataFilesList)} files in device {gpus[i // num_threads_per_device]}."
                 )
                 processList[-1].start()
 
@@ -222,7 +222,7 @@ def runLabelFilterSplitBins(
             os.mkdir(temp_folder_path)
 
         originalBinsCheckMPath = None
-        if self_evaluate is False:
+        if simulated_MAG is False:
             print("\n")
             print("Starting Call Genes...")
             callMarkerGenes(inputBinFolder, temp_folder_path, num_threads_call_genes, hmmModelPath, bin_suffix)
@@ -244,10 +244,10 @@ def runLabelFilterSplitBins(
             estimated_completeness_threshold,
             seq_length_threshold,
             originalBinsCheckMPath,
-            self_evaluate=self_evaluate
+            simulated_MAG=simulated_MAG
         )
 
-        if self_evaluate:
+        if simulated_MAG:
             print()
             return
 

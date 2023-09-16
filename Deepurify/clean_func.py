@@ -13,7 +13,7 @@ def cleanMAGs(
     batch_size_per_gpu: int,
     num_threads_per_device: int,
     overlapping_ratio=0.5,
-    cutSeqLength=8192,
+    cut_seq_length=8192,
     num_threads_call_genes=12,
     hmm_acc_cutoff=0.6,
     hmm_align_ratio_cutoff=0.4,
@@ -32,7 +32,7 @@ def cleanMAGs(
     taxoName2RepNormVecPath: Union[str, None] = None,
     hmmModelPath: Union[str, None] = None,
     model_config: Union[Dict, None] = None,
-    self_evaluate: bool = False
+    simulated_MAG: bool = False
 ):
     """
 
@@ -65,7 +65,7 @@ def cleanMAGs(
         By default, the overlapping ratio is set to 0.5. 
         This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 50\%\ overlap between consecutive subsequences.
 
-        cutSeqLength (int, optional): The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. 
+        cut_seq_length (int, optional): The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. 
         The default setting is 8192, which is also the maximum length allowed during training. 
         If a contig's length surpasses this threshold, it will be divided into smaller subsequences with lengths equal to or less than the cut_seq_length.
         
@@ -125,18 +125,18 @@ def cleanMAGs(
         model_config (Union[Dict, None], optional): The config of model. See the TrainScript.py to find more information. Defaults to None.
         It would be used if you trained a another model with different model_config. Please set this variable equal with None at present.
 
-        self_evaluate (bool, optional): Evaluate the results by the user. Defaults to False. 
-        Set to True if you have knowledge of clean and contaminated contigs in the simulated dataset or you want to evaluate the outcomes by yourself.
-        We would remove the outlier contigs and only keep clean contigs with different cosine similarity threshold for a MAG if this variable is True.
+        simulated_MAG (bool, optional): If the MAGs are simulated MAGs. Evaluate the results by the user if it is True. Defaults to False. 
+        Set to True if you have known core and contaminated contigs in the simulated MAGs or you want to evaluate the outcomes by yourself.
+        We would remove the outlier contigs and only keep core contigs with different cosine similarity threshold for a MAG if this variable is True.
         The outputs will be stored in the following folder path: /temp_output_folder/FilterOutput/
-        You should independently evaluate the outcomes from various similarity threshold and select the best output from the cleaned MAGs.
+        You should independently evaluate the outcomes from various similarity threshold and select the best outcomes from the cleaned MAGs.
     """
 
     print("##################################")
     print("###  WELCOME TO USE DEEPURIFY  ###")
     print("##################################")
     print()
-    assert batch_size_per_gpu <= 20, "batch_size_per_gpu must smaller or equal with 20."
+    assert batch_size_per_gpu <= 16, "batch_size_per_gpu must smaller or equal with 16."
     assert num_threads_per_device <= 4, "num_threads_per_device must smaller or equal with 4."
 
     if input_bin_folder_path[-1] == "/":
@@ -167,7 +167,7 @@ def cleanMAGs(
             mer3Path = os.path.join(info_files_path, "3Mer_vocabulary.txt")
             mer4Path = os.path.join(info_files_path, "4Mer_vocabulary.txt")
         except:
-            print("Warnning !!!! Can not find environment variable 'DeepurifyInfoFiles', Make sure the variables of file paths are not None.")
+            print("Warnning !!!! Can not find environment variable 'DeepurifyInfoFiles', Make sure the variables of file paths not None.")
             if taxoName2RepNormVecPath is None:
                 print("The variable taxoName2RepNormVecPath is None, would build this file with this path: {}".format(os.path.join(
                     filesFolder, "DeepurifyTempOut" "Deepurify_taxo_lineage_vector.pkl")))
@@ -182,7 +182,7 @@ def cleanMAGs(
         "The variable taxoVocabPath is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")
     assert taxoTreePath is not None, ValueError(
         "The variable taxoTreePath is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")
-    if not self_evaluate:
+    if not simulated_MAG:
         assert hmmModelPath is not None, ValueError(
             "The variable hmmModelPath is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")
 
@@ -207,7 +207,7 @@ def cleanMAGs(
         mer3Path=mer3Path,
         mer4Path=mer4Path,
         overlapping_ratio=overlapping_ratio,
-        cutSeqLength=cutSeqLength,
+        cut_seq_length=cut_seq_length,
         num_threads_call_genes=num_threads_call_genes,
         ratio_cutoff=hmm_align_ratio_cutoff,
         acc_cutoff=hmm_acc_cutoff,
@@ -218,5 +218,5 @@ def cleanMAGs(
         topkORgreedy=topk_or_greedy,
         topK=topK_num,
         model_config=model_config,
-        self_evaluate=self_evaluate
+        simulated_MAG=simulated_MAG
     )
