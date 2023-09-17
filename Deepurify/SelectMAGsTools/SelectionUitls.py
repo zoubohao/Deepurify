@@ -26,12 +26,16 @@ class Tree:
 
 
 def getScore(qualityValues: Tuple[float, float, str]) -> float:
-    score = qualityValues[0] - qualityValues[1]
+    score = qualityValues[0] - 5. * qualityValues[1]
     if qualityValues[-1] == "HighQuality":
-        score += 200.0
+        score += 400.0
     elif qualityValues[-1] == "MediumQuality":
-        score += 100.0
+        score += 150.0
     return score
+
+
+def getScoreForLowquality(qualityValues: Tuple[float, float, str]) -> float:
+    return qualityValues[0] - qualityValues[1]
 
 
 def dfsBuildTree(
@@ -114,10 +118,6 @@ def dfsFindBestBins(
         elif highQNum == 1 and mediumQNum == 0 and tree.qualityValues[-1] == "HighQuality":
             if getScore(tree.qualityValues) > getScore(tree.pathBests[0][0]):
                 tree.pathBests = [(tree.qualityValues, tree)]
-
-
-def getScoreForLowquality(qualityValues: Tuple[float, float, str]) -> float:
-    return qualityValues[0] - qualityValues[1]
 
 
 def findCoreOutput(

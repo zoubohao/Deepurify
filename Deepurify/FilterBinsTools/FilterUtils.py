@@ -5,14 +5,11 @@ from copy import deepcopy
 from multiprocessing import Process
 from typing import Dict, List, Set, Tuple, Union
 
-import numpy as np
-
 from Deepurify.IOUtils import (readAnnotResult, readCheckMResultAndStat,
                                readFasta, readHMMFile, writeAnnot2BinNames,
                                writeFasta)
 from Deepurify.LabelContigTools.LabelBinUtils import \
     getBestMultiLabelsForFiltering
-from Deepurify.SeqProcessTools.SequenceUtils import getThre
 
 index2Taxo = {1: "T1_filter", 2: "T2_filter", 3: "T3_filter", 4: "T4_filter", 5: "T5_filter", 6: "T6_filter"}
 
@@ -75,8 +72,7 @@ def splitContigs(
     contigName2_gene2num: Dict[str, Dict[str, int]],
     replication_times_threashold: int,
     estimate_completeness_threshold: float,
-    core: bool,
-    thre: float = 0.72
+    core: bool
 ) -> List[Dict[str, str]]:
     c1 = deepcopy(contigName2seq)
     c2 = deepcopy(gene2contigNames)
@@ -151,14 +147,13 @@ def splitContigs(
 
     filtedContigList = sorted(filtedContigList, key=lambda x: x[-1], reverse=True)
     first = filtedContigList[0]
-    if first[1] <= thre:
+    if first[1] <= 0.72:
         return splitContigs(c1,
                             c2,
                             c3,
                             replication_times_threashold + 1,
                             estimate_completeness_threshold,
-                            core,
-                            thre)
+                            core)
     else:
         return [
             infoPair[0]
@@ -264,7 +259,7 @@ def filterContaminationOneBin(
     q = res[binNamePro]
     
     filtedContigName2seqList = \
-    splitContigs(filtedContigName2seq, gene2contigList, contigName2_gene2num, 1, estimate_completeness_threshold, True, getThre(q[0], q[1], taxoLevel))
+    splitContigs(filtedContigName2seq, gene2contigList, contigName2_gene2num, 1, estimate_completeness_threshold, True)
     
     idx_k = 0
     for coreName2seqFilter in filtedContigName2seqList:

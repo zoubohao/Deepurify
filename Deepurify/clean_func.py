@@ -9,9 +9,9 @@ def cleanMAGs(
     input_bin_folder_path: str,
     output_bin_folder_path: str,
     bin_suffix: str,
-    gpu_num: int,
-    batch_size_per_gpu: int,
-    num_threads_per_device: int,
+    gpu_num: int = 1,
+    batch_size_per_gpu: int = 1,
+    num_threads_per_device: int = 1,
     overlapping_ratio=0.5,
     cut_seq_length=8192,
     num_threads_call_genes=12,
@@ -39,104 +39,98 @@ def cleanMAGs(
     The main function to clean the MAGs.
 
     Args:
-        input_bin_folder_path (str): The folder of input MAGs
+        input_bin_folder_path (str): The input folder containing MAGs
 
-        output_bin_folder_path (str): The folder used to output cleaned MAGs.
+        output_bin_folder_path (str): The output folder containing decontaminated MAGs.
 
-        bin_suffix (str): The bin suffix of MAG files.
+        bin_suffix (str): The suffix of MAG files.
 
-        gpu_num (int): The number of GPUs to be used can be specified. Defaults to 0.
-        If you set it to 0, the code will utilize the CPU. 
-        However, please note that using the CPU can result in significantly slower processing speed. 
-        It is recommended to provide at least one GPU for better performance.
+        gpu_num (int): The number of GPUs to be used, with the default value being 1. 
+        Setting it to 0 will make the code use the CPU, but it's important to note that using the CPU can result in significantly slower processing speeds. 
+        For better performance, it is recommended to have at least one GPU with a memory capacity of 3GB or more.
 
-        batch_size_per_gpu (int): The batch size per GPU determines the number of sequences that will be loaded onto each GPU. 
-        This parameter is only applicable if the --gpu_num option is set to a value greater than 0. 
-        The default value is 2, meaning that two sequences will be loaded per GPU batch.
-        The batch size for CPU is 2.
+        batch_size_per_gpu (int): The --batch_size_per_gpu defines the number of sequences loaded onto each GPU simultaneously. 
+        This parameter is relevant only when the --gpu_num option is set to a value greater than 0. 
+        The default batch size is 1, which means that one sequence will be loaded per GPU by default.
 
-        num_threads_per_device (int): The number of threads per GPU or CPU determines the parallelism level during contigs' inference stage. 
-        If the value of --gpu_num is greater than 0, each GPU will have a set number of threads to do inference. 
-        Similarly, if --gpu_num is set to 0 and the code is running on CPU, the specified number of threads will be used. 
-        By default, the number of threads per GPU or CPU is set to 1. 
-        The --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per thread.
+        num_threads_per_device (int): The --num_threads_per_device (GPU or CPU) controls the level of parallelism during the contigs' lineage inference stage. 
+        If the --gpu_num option is set to a value greater than 0, each GPU will utilize this specified number of threads for inference. 
+        Likewise, if --gpu_num is set to 0 and the code runs on a CPU, the same number of threads will be employed. 
+        By default, each GPU or CPU uses 1 thread. 
+        The --batch_size_per_gpu value will be divided by this value to calculate the batch size per thread.
 
-        overlapping_ratio (float): The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. 
-        By default, the overlapping ratio is set to 0.5. 
-        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 50\%\ overlap between consecutive subsequences.
+        overlapping_ratio (float): The --overlapping_ratio parameter comes into play when a contig's length exceeds the specified --cut_seq_length. 
+        The default value for the overlapping ratio is set at 0.5. 
+        This implies that if a contig surpasses the --cut_seq_length, it will be divided into overlapping subsequences with a 0.5 overlap between each consecutive subsequence.
 
-        cut_seq_length (int, optional): The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. 
-        The default setting is 8192, which is also the maximum length allowed during training. 
-        If a contig's length surpasses this threshold, it will be divided into smaller subsequences with lengths equal to or less than the cut_seq_length.
+        cut_seq_length (int, optional): The --cut_seq_length parameter sets the maximum length for contigs. 
+        The default value is 8192, which is also the maximum length allowed during training. 
+        If a contig's length exceeds this threshold, it will be split into smaller subsequences, each with a length equal to or less than the specified cut_seq_length.
         
         num_threads_call_genes (int, optional): The number of threads to call genes. Defaults to 12.
 
-        hmm_acc_cutoff (float, optional): If the acc score and the aligned ratio assigned by the HMM model for a gene sequence exceeds this threshold, 
-        it would be considered as a single-copy gene. It is set to 0.6 by default.
+        hmm_acc_cutoff (float, optional): A gene sequence will be classified as a single-copy gene if both its accuracy (acc) score and aligned ratio, 
+        as determined by the HMM model, surpass a specified threshold. 
+        The default threshold is set to 0.6.
 
-        hmm_align_ratio_cutoff (float, optional): If the acc score and the aligned ratio assigned by the HMM model for a gene sequence exceeds this threshold, 
-        it would be considered as a single-copy gene. It is set to 0.4 by default.
+        hmm_align_ratio_cutoff (float, optional): A gene sequence will be classified as a single-copy gene if both its accuracy (acc) score and aligned ratio, 
+        as determined by the HMM model, surpass a specified threshold. 
+        The default threshold is set to 0.4.
 
-        estimated_completeness_threshold (float, optional): The --estimate_completeness_threshold is used as a criterion for filtering MAGs that are generated 
-        by applying specific single-copy genes (SCGs). The default threshold is set to 0.55. 
-        MAGs with an estimated completeness score equal to or higher than this threshold will be considered for further analysis or inclusion, 
-        while those falling below the threshold may be filtered out.
+        estimated_completeness_threshold (float, optional): The --estimate_completeness_threshold serves as a filter criterion for MAGs obtained through the application of specific single-copy gene.
+        The default threshold is 0.55, meaning that MAGs with an estimated completeness score equal to or greater than this value will be retained for further analysis, 
+        while those scoring below it would be excluded.
 
-        seq_length_threshold (int, optional): The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs). 
-        The default threshold is set to 550,000, which represents the total length of the contigs in base pairs (bp). 
-        MAGs with a total contig length equal to or greater than this threshold will be considered for further analysis or inclusion, 
-        while MAGs with a total contig length below the threshold may be filtered out.
+        seq_length_threshold (int, optional): The threshold for the cumulative length of contigs within a MAG, which is used to filter MAGs. 
+        The default threshold is 550,000 bps. 
+        MAGs with a cumulative contig length equal to or exceeding this threshold will be retained for further analysis, whereas those falling below the threshold would be excluded.
 
         checkM_process_num (int, optional): The number of processes to run CheckM simultaneously. Defaults to 1.
 
         num_threads_per_checkm (int, optional): The number of threads to run a single CheckM process. Defaults to 12.
 
-        topk_or_greedy (str, optional): Topk searching or greedy searching to label a contig. Defaults to 'topk'.
-        The contig is assigned a label based on the top-k most relevant or similar taxonomic lineages. 
-        The specific number of lineages considered for labeling can be determined by the value of k.
+        topk_or_greedy (str, optional): Topk searching or greedy searching to assign taxonomic lineage for a contig. Defaults to 'topk'.
 
-        topK_num (int, optional): During the top-k searching approach, the default behavior is to search for the top-k taxon nodes that exhibit the highest cosine 
-        similarity with the contig's encoded vector. 
-        By default, the value of k is set to 3, meaning that the three most similar nodes in terms of cosine similarity will be considered for labeling the contig. 
-        Please note that this parameter does not have any effect when using the greedy search approach (topK_num=1).
+        topK_num (int, optional): The k setting for topk searching. Default to 3.
 
-        temp_output_folder (Union[str, None], optional): The temporary files generated during the process can be stored in a specified folder path. 
-        By default, if no path is provided (i.e., set to None), the temporary files will be stored in the parent folder of the 'input_bin_folder_path' location. 
-        However, you have the option to specify a different folder path to store these temporary files if needed.
+        temp_output_folder (Union[str, None], optional): The folder stores the temporary files, which are generated during the running Deepurify. 
+        If no path is provided (set to None), the temporary files will be stored in the parent folder of the '--input_bin_folder_path' location by default.
 
-        output_bins_meta_info_path (Union[str, None], optional): The path of a text file can be provided to record the meta information, including the evaluated results, of the final cleaned MAGs. 
-        By default, if no path is specified (i.e., set to None), the file will be created under the 'output_bin_folder_path' directory. 
-        However, you have the flexibility to specify a different file path if desired.
+        output_bins_meta_info_path (Union[str, None], optional): The path for a text file to record meta information, including the evaluated results of the output MAGs.
+        If no path is provided (set to None), the file will be automatically created in the '--output_bin_folder_path' directory by default.
 
-        info_files_path (Union[str, None]): The DeepurifyInfoFiles is essential for running Deepurify. 
-        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to point to the appropriate folder. 
-        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
+        info_files_path (Union[str, None]): The files in the 'DeepurifyInfoFiles' folder are a crucial requirement for running Deepurify. 
+        If you don't provide a path explicitly (set to None), it is assumed that the 'DeepurifyInfoFiles' environment variable has been properly configured to point to the necessary folder. 
+        Ensure that the 'DeepurifyInfoFiles' environment variable is correctly set up if you don't specify the path.
+        If you set this variable to None and we can not find 'DeepurifyInfoFiles' environment variable either, than you should manually input the path of running files. 
 
-        modelWeightPath (Union[str, None], optional): The path of model weight. (In DeepurifyInfoFiles folder) Defaults to None.
+        modelWeightPath (Union[str, None], optional): The path of model weight. Defaults to None. (In DeepurifyInfoFiles folder)
 
-        taxoVocabPath (Union[str, None], optional): The path of taxon vocabulary. (In DeepurifyInfoFiles folder) Defaults to None.
+        taxoVocabPath (Union[str, None], optional): The path of taxon vocabulary. Defaults to None. (In DeepurifyInfoFiles folder)
 
-        taxoTreePath (Union[str, None], optional): The path of taxonomic tree. (In DeepurifyInfoFiles folder) Defaults to None.
+        taxoTreePath (Union[str, None], optional): The path of taxonomic tree. Defaults to None. (In DeepurifyInfoFiles folder)
 
-        taxoName2RepNormVecPath (Union[str, None], optional): The path of taxonomic lineage encoded vectors. (In DeepurifyInfoFiles folder) Defaults to None.
+        taxoName2RepNormVecPath (Union[str, None], optional): The path of taxonomic lineage encoded vectors. Defaults to None. 
+        We can generate this file if this variable sets None. (In DeepurifyInfoFiles folder)
 
-        hmmModelPath (Union[str, None], optional): The path of SCGs' hmm file. (In DeepurifyInfoFiles folder) Defaults to None.
+        hmmModelPath (Union[str, None], optional): The path of SCGs' hmm file. Defaults to None. (In DeepurifyInfoFiles folder)
 
         model_config (Union[Dict, None], optional): The config of model. See the TrainScript.py to find more information. Defaults to None.
-        It would be used if you trained a another model with different model_config. Please set this variable equal with None at present.
+        It would be used if you trained a another model with different model_config. 
+        Please set this variable equal with None at present.
 
-        simulated_MAG (bool, optional): If the MAGs are simulated MAGs. Evaluate the results by the user if it is True. Defaults to False. 
-        Set to True if you have known core and contaminated contigs in the simulated MAGs or you want to evaluate the outcomes by yourself.
-        We would remove the outlier contigs and only keep core contigs with different cosine similarity threshold for a MAG if this variable is True.
-        The outputs will be stored in the following folder path: /temp_output_folder/FilterOutput/
-        You should independently evaluate the outcomes from various similarity threshold and select the best outcomes from the cleaned MAGs.
+        simulated_MAG (bool, optional): If the input MAGs are simulated MAGs. False by default.
+        This option is valuable when you have prior knowledge of core and contaminated contigs in simulated MAGs or prefer to personally assess the results. 
+        When it sets to True, we will exclude contaminated contigs and retain core contigs using varying cosine similarity thresholds for each MAG. 
+        Multiple sets of results will be generated in different folders within the '/temp_output_folder/FilterOutput/' directory. 
+        You should independently evaluate these different results and select the MAGs that exhibit the best performance.
     """
 
     print("##################################")
     print("###  WELCOME TO USE DEEPURIFY  ###")
     print("##################################")
     print()
-    assert batch_size_per_gpu <= 16, "batch_size_per_gpu must smaller or equal with 16."
+    assert batch_size_per_gpu <= 32, "batch_size_per_gpu must smaller or equal with 32."
     assert num_threads_per_device <= 4, "num_threads_per_device must smaller or equal with 4."
 
     if input_bin_folder_path[-1] == "/":
@@ -156,7 +150,15 @@ def cleanMAGs(
         gpu_work_ratio += [1.0 - sum(gpu_work_ratio)]
     batch_size_per_gpu = [batch_size_per_gpu for _ in range(gpu_num)]
 
-    if info_files_path is None:
+    if isinstance(info_files_path, str):
+        modelWeightPath = os.path.join(info_files_path, "CheckPoint", "Deepurify.ckpt")
+        taxoVocabPath = os.path.join(info_files_path, "TaxonomyInfo", "ProGenomesVocabulary.txt")
+        taxoTreePath = os.path.join(info_files_path, "TaxonomyInfo", "ProGenomesTaxonomyTree.pkl")
+        taxoName2RepNormVecPath = os.path.join(info_files_path, "PyObjs", "Deepurify_taxo_lineage_vector.pkl")
+        hmmModelPath = os.path.join(info_files_path, "HMM", "hmm_model.hmm")
+        mer3Path = os.path.join(info_files_path, "3Mer_vocabulary.txt")
+        mer4Path = os.path.join(info_files_path, "4Mer_vocabulary.txt")
+    elif info_files_path is None:
         try:
             info_files_path = os.environ["DeepurifyInfoFiles"]
             modelWeightPath = os.path.join(info_files_path, "CheckPoint", "Deepurify.ckpt")
@@ -166,13 +168,14 @@ def cleanMAGs(
             hmmModelPath = os.path.join(info_files_path, "HMM", "hmm_model.hmm")
             mer3Path = os.path.join(info_files_path, "3Mer_vocabulary.txt")
             mer4Path = os.path.join(info_files_path, "4Mer_vocabulary.txt")
-        except:
-            print("Warnning !!!! Can not find environment variable 'DeepurifyInfoFiles', Make sure the variables of file paths not None.")
-            if taxoName2RepNormVecPath is None:
-                print("The variable taxoName2RepNormVecPath is None, would build this file with this path: {}".format(os.path.join(
-                    filesFolder, "DeepurifyTempOut" "Deepurify_taxo_lineage_vector.pkl")))
-                taxoName2RepNormVecPath = os.path.join(
-                    filesFolder, "DeepurifyTempOut" "Deepurify_taxo_lineage_vector.pkl")
+        except Exception as e:
+            raise ValueError(
+                "Error, can not find environment variable 'DeepurifyInfoFiles'. Make sure the variables info_files_path not None."
+            ) from e
+    elif taxoName2RepNormVecPath is None:
+        taxoName2RepNormVecPath = \
+            os.path.join(filesFolder, "DeepurifyTempOut" "Deepurify_taxo_lineage_vector.pkl")
+        print(f"The variable 'taxoName2RepNormVecPath' is None, would build this file with this path: {taxoName2RepNormVecPath}")
 
     assert mer3Path is not None and mer4Path is not None, ValueError(
         "The variable mer3Path or mer4Path is None. Please check this file if it is in 'DeepurifyInfoFiles' folder.")

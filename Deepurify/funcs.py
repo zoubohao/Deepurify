@@ -52,6 +52,7 @@ def runLabelFilterSplitBins(
     model_config: Dict,
     simulated_MAG=False
 ):
+    # make dir
     print("Estimating Taxonomic Similarity by Labeling Lineage for Each Contig in the MAG.")
     print()
     if os.path.exists(tempFileOutFolder) is False:
@@ -62,6 +63,8 @@ def runLabelFilterSplitBins(
         os.mkdir(annotOutputFolder)
     if os.path.exists(outputBinFolder) is False:
         os.mkdir(outputBinFolder)
+
+    # deal the issue that taxoName2RepNormVec.pkl file not exist.
     with open(os.path.join(outputBinFolder, "time.txt"), "w") as wht:
         startTime = time.clock_gettime(0)
         if os.path.exists(taxoName2RepNormVecPath) is False:
@@ -99,24 +102,17 @@ def runLabelFilterSplitBins(
                 drop_connect_ratio=0.0,
                 dropout=0.0,
             )
-            print("Warning, DO NOT FIND taxoName2RepNormVecPath FILE. Start to build taxoName2RepNormVecPath file. ")
+            print("Warning, can not file taxoName2RepNormVecPath file. Start to build it. ")
             state = torch.load(modelWeightPath, map_location="cpu")
             model.load_state_dict(state, strict=True)
             with torch.no_grad():
                 buildTextsRepNormVector(taxo_tree, model, taxo_vocabulary, "cpu", taxoName2RepNormVecPath)
         processList = []
         error_queue = Queue()
-        nextIndex = 0
         if num_gpu == 0:
             binFilesList = os.listdir(inputBinFolder)
-            totalNum = len(binFilesList)
-            for i in range(num_threads_per_device):
-                if i != (num_threads_per_device) - 1:
-                    cutFileLength = totalNum // num_threads_per_device + 1
-                    curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
-                    nextIndex += cutFileLength
-                else:
-                    curDataFilesList = binFilesList[nextIndex:]
+            file_list_list = splitListEqually(binFilesList, num_threads_per_device)
+            for i, curDataFilesList in enumerate(file_list_list):
                 processList.append(
                     Process(
                         target=labelBinsFolder,
@@ -152,28 +148,28 @@ def runLabelFilterSplitBins(
                 assert b % num_threads_per_device == 0, f"The batch size number: {b} in batch_size_per_gpu can not divide num_threads_per_device: {num_threads_per_device}."
             gpus = [f"cuda:{str(i)}" for i in range(num_gpu)]
             binFilesList = os.listdir(inputBinFolder)
-            totalNum = len(binFilesList)
-            for i in range(num_gpu * num_threads_per_device):
-                if i != (num_gpu * num_threads_per_device) - 1:
-                    cutFileLength = int(totalNum * gpus_work_ratio[i // num_threads_per_device] / num_threads_per_device + 0.0) + 1
-                    curDataFilesList = binFilesList[nextIndex: nextIndex + cutFileLength]
-                    nextIndex += cutFileLength
-                else:
-                    curDataFilesList = binFilesList[nextIndex:]
+            file_list_list = splitListEqually(binFilesList, num_gpu * num_threads_per_device)
+            tuple_file_list_list = []
+            k = 0
+            for file_list in file_list_list:
+                tuple_file_list_list.append((k, file_list))
+                k += 1
+                if k >= num_gpu: k = 0
+            for i, curDataFilesList in tuple_file_list_list:
                 processList.append(
                     Process(
                         target=labelBinsFolder,
                         args=(
                             inputBinFolder,
                             annotOutputFolder,
-                            gpus[i // num_threads_per_device],
+                            gpus[i],
                             modelWeightPath,
                             mer3Path,
                             mer4Path,
                             taxoVocabPath,
                             taxoTreePath,
                             taxoName2RepNormVecPath,
-                            batch_size_per_gpu[i // num_threads_per_device] // num_threads_per_device,
+                            batch_size_per_gpu[i] // num_threads_per_device,
                             6,
                             bin_suffix,
                             curDataFilesList,
@@ -188,7 +184,7 @@ def runLabelFilterSplitBins(
                     )
                 )
                 print(
-                    f"Processer {i} has {len(curDataFilesList)} files in device {gpus[i // num_threads_per_device]}."
+                    f"Processer {i} has {len(curDataFilesList)} files in device {gpus[i]}."
                 )
                 processList[-1].start()
 
@@ -223,16 +219,14 @@ def runLabelFilterSplitBins(
 
         originalBinsCheckMPath = None
         if simulated_MAG is False:
-            print("\n")
-            print("Starting Call Genes...")
+            _echo("Starting Call Genes...")
             callMarkerGenes(inputBinFolder, temp_folder_path, num_threads_call_genes, hmmModelPath, bin_suffix)
-            print("Starting Run CheckM...")
+            _echo("Starting Run CheckM...")
             runCheckMsingle(inputBinFolder, os.path.join(filterOutputFolder, "original_checkm.txt"),
                         num_threads_per_checkm * checkM_process_num, bin_suffix)
             originalBinsCheckMPath = os.path.join(filterOutputFolder, "original_checkm.txt")
 
-        print("\n")
-        print("Starting Filter Contaminations and Separate Bins...")
+        _echo("Starting Filter Contaminations and Separate Bins...")
         filterContaminationFolder(
             annotOutputFolder,
             inputBinFolder,
@@ -251,12 +245,10 @@ def runLabelFilterSplitBins(
             print()
             return
 
-        print("\n")
-        print("Starting Run CheckM...")
+        _echo("Starting Run CheckM...")
         runCheckMParall(filterOutputFolder, bin_suffix, checkM_process_num, num_threads_per_checkm)
 
-        print("\n")
-        print("Starting Gather Result...")
+        _echo("Starting Gather Result...")
         with open(outputBinsMetaFilePath, "w") as wh:
             binFilesList = os.listdir(inputBinFolder)
             tN = len(binFilesList)
@@ -289,6 +281,12 @@ def runLabelFilterSplitBins(
         print("\n")
         end2Time = time.clock_gettime(0)
         wht.write(str(end1Time - startTime) + "\t" + str(end2Time - startTime) + "\n")
+
+
+def _echo(arg0):
+    print("\n")
+    print(arg0)
+    print("\n")
 
 
 ### CheckM ###

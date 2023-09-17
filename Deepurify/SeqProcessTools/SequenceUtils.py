@@ -1,4 +1,3 @@
-import math
 import random
 from typing import Dict, List, Tuple, TypeVar, Union
 
@@ -6,22 +5,6 @@ import numpy as np
 import torch
 
 Tensor = TypeVar("Tensor")  # The tensor of pytorch
-
-
-def sigmoid(z):
-    return 1/(1 + np.exp(-z))
-
-
-def getThre(comp, conta, taxoLevel): 
-    v1 = (conta - 10.) / 100.
-    v2 = (comp - 50.) / 100.
-    a = math.log(sigmoid(v1 * 0.9 + v2 * 0.3 - taxoLevel * 0.0125) + 1., 4.35)
-    thre = 1.0 - a
-    if thre > 0.77:
-        thre = 0.77
-    elif thre < 0.67:
-        thre = 0.67
-    return thre
 
 
 def ConvertTextToIndexTensor(vocabulary: Dict, labelText: List) -> Tensor:
