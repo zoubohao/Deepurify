@@ -1,6 +1,6 @@
 # Deepurify_Project
 
-<div align=center> <img width="300" height="300" src="/deeplogo-s.png" alt="logo"></div>
+<div align=center> <img width="300" height="300" src="/deeplogo.png" alt="logo"></div>
 
   **Paper --> Deepurify: a multi-modal deep language model to remove contamination from metagenome-assembled genomes**
   
