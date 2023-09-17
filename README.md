@@ -142,7 +142,6 @@ This file contains the following columns:
 - CPU: No restriction.
 - RAM: > 45GB (Running CheckM with using the full reference genome tree required approximately 40 GB of memory.)
 - GPU: The GPU memory must be equal to or greater than 3GB.
-
 This system can run the configuration in the **"Running Deepurify"** section.
 
 
@@ -151,5 +150,4 @@ This system can run the configuration in the **"Running Deepurify"** section.
 - CPU: AMD EPYC 7542 (32 cores 64 threads).
 - RAM: 256GB
 - GPU: Double GTX-3090 24GB
-
 This system can run the configuration in the main.py file.
