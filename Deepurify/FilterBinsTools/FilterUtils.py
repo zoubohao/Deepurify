@@ -22,7 +22,7 @@ def allocate(
     splitContigSetList: List[Set[str]],
     splitRecordGenes: List[Dict[str, int]],
     info: Tuple[str, Dict[str, int], int],
-    replication_times_threashold: int,
+    re_thre: int,
 ) -> None:
     if not splitContigSetList:
         allocate_new_set(info, splitContigSetList, splitRecordGenes)
@@ -33,7 +33,7 @@ def allocate(
             for gene, num in info[1].items():
                 if gene in record:
                     recordNum = record[gene]
-                    if (recordNum + num) > replication_times_threashold:
+                    if (recordNum + num) > re_thre:
                         if_insert = False
                         break
             if if_insert is True:
@@ -70,7 +70,7 @@ def splitContigs(
     contigName2seq: Dict[str, str],
     gene2contigNames: Dict[str, List[str]],
     contigName2_gene2num: Dict[str, Dict[str, int]],
-    replication_times_threashold: int,
+    re_thre: int,
     estimate_completeness_threshold: float,
     core: bool
 ) -> List[Dict[str, str]]:
@@ -122,7 +122,7 @@ def splitContigs(
                 infoList.append((curContig, gene2num, length, score))
         sortedByLength = list(sorted(infoList, key=lambda x: x[3], reverse=True))  # greedy add but not the optimial
         for info in sortedByLength:
-            allocate(splitContigSetList, splitRecordGenes, info, replication_times_threashold)
+            allocate(splitContigSetList, splitRecordGenes, info, re_thre)
 
     if not splitContigSetList:
         return [notExistGeneContig2seq] if core else []
@@ -151,7 +151,7 @@ def splitContigs(
         return splitContigs(c1,
                             c2,
                             c3,
-                            replication_times_threashold + 1,
+                            re_thre + 1,
                             estimate_completeness_threshold,
                             core)
     else:
