@@ -105,6 +105,7 @@ def dfsFindBestBins(
                 highQNum += 1
             elif qulaityValuesChild[-1] == "MediumQuality":
                 mediumQNum += 1
+        ## compare
         if highQNum == 0:
             if tree.qualityValues[-1] == "HighQuality":
                 if mediumQNum < 2:

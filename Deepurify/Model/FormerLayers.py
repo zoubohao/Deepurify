@@ -197,11 +197,11 @@ class BlockAttentionUpdate(nn.Module):
         B, L, C = x.shape
         x = self.ln(x)
         x = x.view([-1, L, 3, C // 3])
-        trans = self.trans1(x).view([-1, L, 3, 32, 8])  # [B, L, 3, 32, 8]
-        outer1 = trans.unsqueeze(-1)  # [B, L, 3, 32, 8, 1]
-        outer2 = trans.unsqueeze(4)  # [B, L, 3, 32, 1, 8]
+        trans = self.trans1(x).view([-1, L, 3, 32, 8])  # [B, L, 3, h, 8]
+        outer1 = trans.unsqueeze(-1)  # [B, L, 3, h, 8, 1]
+        outer2 = trans.unsqueeze(4)  # [B, L, 3, h, 1, 8]
         outerproduct = torch.matmul(outer1, outer2)
-        meanOut = torch.mean(outerproduct, dim=2, keepdim=False).view([-1, L, 32, 64]).contiguous().permute([0, 2, 1, 3])  # [B, 32, L, 64]
+        meanOut = torch.mean(outerproduct, dim=2, keepdim=False).view([-1, L, 32, 64]).contiguous().permute([0, 2, 1, 3])  # [B, h, L, 64]
         meanTrans = F.gelu(self.attenTrans(meanOut).contiguous())
         rawScore = torch.matmul(meanOut, meanTrans.transpose(-1, -2)).permute([0, 2, 3, 1])
         return self.trans2(rawScore)
