@@ -46,7 +46,7 @@ def config_train(fileConfig=None, modelConfig=None, trainingConfig=None):
             "batchSize": 16,
             "weightSavePath": "./DeepurifyInfoFiles/CheckPoint/",
             "loadWeightPath": "",
-            "reguLambda": 5e-5,
+            "reguLambda": 5e-4,
             "learningRate": 1e-4,
             "multiplier": 1.5,
             "warmEpoch": 2,

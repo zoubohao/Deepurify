@@ -124,12 +124,9 @@ class TensorRowWiseGateSelfAttention(nn.Module):
         pairBias = self.pair_linear(pairX).permute([0, 3, 1, 2]).unsqueeze(1)  # [B, 1, h, L, L]
         oriQK = qkMatrix + pairBias
         convQK = self.conv3d(oriQK)
-        score1 = F.softmax(oriQK + convQK, dim=-1)
-        score1 = self.dropout1(score1)
-        score2 = F.softmax(convQK, dim=-1) + F.softmax(convQK, dim=-2)
-        score2 = self.dropout3(score2)
-        scoreF = (score1 + score2) / 3.0
-        h_outs = torch.matmul(scoreF, v) * torch.sigmoid(g)  # [B, 3, h, L, d_k]
+        score = F.softmax(oriQK + convQK, dim=-1)
+        score = self.dropout1(score)
+        h_outs = torch.matmul(score, v) * torch.sigmoid(g)  # [B, 3, h, L, d_k]
         h_outs = h_outs.permute([0, 3, 1, 2, 4]).contiguous().view([-1, L, self.d_model])
         rawScoreMean = F.gelu(torch.mean(oriQK + convQK, dim=1).permute([0, 2, 3, 1]).contiguous())
         return self.dropout2(self.out(h_outs)) + ori_x * self.g, self.pair_linear_rev(rawScoreMean)
