@@ -13,7 +13,7 @@ Please independently install the following tools and ensure their proper functio
 2. **[Hmmer](http://hmmer.org/download.html)** v.3.3.1 (Detecting conserved single-copy marker genes)
 3. **[CheckM](https://github.com/Ecogenomics/CheckM/wiki/)** v 1.2.2 (Evaluate the quality of MAGs)
 **Note**: Installing the correct version of **pplacer** is essential to avoid errors when running CheckM. 
-            Failure to do so may result in errors during execution CheckM. 
+            Failure to do so may result in errors during the execution of CheckM. 
             We utilized pplacer version "v1.1.alpha19" in our work.
 4. **[PyTorch](https://pytorch.org/)** v2.0.1 + cu118 (GPU version)
 
@@ -25,6 +25,7 @@ Deepurify can be installed using pip without dependencies.
 ```
 pip install Deepurify==1.2.4
 ```
+This installation process would take a few seconds.
 
 
 ## Download Files and Set Environment Variable for Running
@@ -56,7 +57,7 @@ if __name__ == "__main__":
         output_bin_folder_path=outputBinFolderPath, # Output directory containing purification MAGs
         bin_suffix="fa", # The file suffix of MAGs.
         gpu_num=1, # Specify the number of GPUs to be used (use '0' for CPU, considerably slower than using GPU).
-        batch_size_per_gpu=1, # The number of batch size for each GPU. Useless with gpu_num=0
+        batch_size_per_gpu=1, # The number of batch sizes for each GPU. Useless with gpu_num=0
         num_threads_per_device=1, # The number of threads for labeling taxonomic lineage for contigs.
         num_threads_call_genes=1, # The number of threads to call genes.
         checkM_process_num=1, # The number of processes to run CheckM simultaneously.
@@ -81,9 +82,9 @@ usage: deepurify clean [-h] -i INPUT_PATH -o OUTPUT_PATH --bin_suffix BIN_SUFFIX
 options:
   -h, --help            show this help message and exit
   -i INPUT_PATH, --input_path INPUT_PATH
-                        The input folder containing MAGs
+                        The input folder contains MAGs
   -o OUTPUT_PATH, --output_path OUTPUT_PATH
-                        The output folder containing decontaminated MAGs.
+                        The output folder contains decontaminated MAGs.
   --bin_suffix BIN_SUFFIX
                         The suffix of MAG files.
   --gpu_num GPU_NUM     The number of GPUs to be used, with the default value being 1. Setting it to 0 will make the code use the CPU, but it's important to note that using
@@ -104,15 +105,15 @@ options:
   --num_threads_per_checkm NUM_THREADS_PER_CHECKM
                         The number of threads to run a single CheckM process. Defaults to 12.
   --temp_output_folder TEMP_OUTPUT_FOLDER
-                        The folder stores the temporary files, which are generated during the running Deepurify. If no path is provided (set to None), the temporary files will
+                        The folder stores the temporary files, which are generated during the running of Deepurify. If no path is provided (set to None), the temporary files will
                         be stored in the parent folder of the '--input_bin_folder_path' location by default.
   --output_bins_meta_info_path OUTPUT_BINS_META_INFO_PATH
                         The path for a text file to record meta information, including the evaluated results of the output MAGs. If no path is provided (set to None), the file
                         will be automatically created in the '--output_bin_folder_path' directory by default.
   --info_files_path INFO_FILES_PATH
                         The files in the 'DeepurifyInfoFiles' folder are a crucial requirement for running Deepurify. If you don't provide a path explicitly (set to None), it
-                        is assumed that the 'DeepurifyInfoFiles' environment variable has been properly configured to point to the necessary folder. Ensure that the
-                        'DeepurifyInfoFiles' environment variable is correctly set up if you don't specify the path.
+                        is assumed that the 'DeepurifyInfoFiles' environment variable has been properly configured to point to the necessary folder. Ensure that
+                        the 'DeepurifyInfoFiles' environment variable is correctly set up if you don't specify the path.
   --simulated_MAG {True,False}
                         If the input MAGs are simulated MAGs. False by default. This option is valuable when you have prior knowledge of core and contaminated contigs in
                         simulated MAGs or prefer to personally assess the results. When it sets to True, we will exclude contaminated contigs and retain core contigs using
@@ -122,7 +123,7 @@ options:
 ```
 
 
-## Files in output directory
+## Files in the Output Directory
 - #### The purified MAGs.
 - #### time.txt 
 The elapsed running time of Deepurify is shown in two columns. 
@@ -142,7 +143,7 @@ This file contains the following columns:
 ## Minimum System Requirements for Running Deepurify
 - System: Linux (>= Ubuntu 22.04.2 LTS)
 - CPU: No restriction.
-- RAM: > 45GB (Running CheckM with using the full reference genome tree required approximately 40 GB of memory.)
+- RAM: > 45GB (Running CheckM using the full reference genome tree required approximately 40 GB of memory.)
 - GPU: The GPU memory must be equal to or greater than 3GB.
 
 This system can run the configuration in the **"Running Deepurify"** section.
