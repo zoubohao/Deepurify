@@ -42,6 +42,7 @@ For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/DeepurifyInfoFile
 source .bashrc
 ```
 
+This file `Py_files_and_description.pdf' gives the detailed description of the code's functionality.
 
 ## Running Deepurify
 1.  You can run the Deepurify through the **cleanMAGs** function.
