@@ -2,7 +2,7 @@
 
   **Paper --> Deepurify: a multi-modal deep language model to remove contamination from metagenome-assembled genomes**
   
- Deepurify elevates metagenome-assembled genomes' (MAGs) quality by utilizing a multi-modal deep language model to filter contaminated contigs, and it can leverage GPU acceleration.
+ Deepurify elevates metagenome-assembled genomes' (MAGs) quality by utilizing a multi-modal deep language model to filter contaminated contigs. This procedure can leverage GPU acceleration.
 
 <div align=center> <img src="/deeplogo.png" alt="logo"></div>
 
