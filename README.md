@@ -28,6 +28,8 @@ Create deepurify's conda environment by using this command:
 conda env create -n deepurify -f deepurify-conda-env.yml
 ```
 
+Do not forget to download the database files for **CheckM2 !!!**
+
 and Please download PyTorch v2.0.1 -cu118 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
 
 #### SECOND STEP (Install Codes)
