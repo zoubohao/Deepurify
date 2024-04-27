@@ -41,7 +41,6 @@ After preparing the env, the code of Deepurify can be installed via pip.
 
 ```
 conda activate deepurify
-
 pip install Deepurify==2.3.2
 ```
 
