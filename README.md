@@ -30,7 +30,10 @@ conda env create -n deepurify -f deepurify-conda-env.yml
 
 Do not forget to download the database files for **CheckM2 !!!**
 
-and Please download PyTorch v2.0.1 -cu118 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
+and Please download PyTorch v2.1.0 -cu121 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
+```
+conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
+```
 
 #### SECOND STEP (Install Codes)
 After preparing the env, the code of Deepurify can be installed via pip. 
