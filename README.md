@@ -59,7 +59,7 @@ For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
 source .bashrc
 ```
 
-**OR***
+#### **OR**
 
 - **You can set the '--db_folder_path' in CLI to the path of 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
