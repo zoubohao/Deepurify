@@ -1,54 +1,50 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from Deepurify.Model.Convolutions import MEfficientNet, Permute
-from Deepurify.Model.FormerLayers import FormerEncoder
+import torch.nn.functional as F
+
+from .Convolutions import MEfficientNet
+from .FormerLayers import FormerEncoder
 
 
-class GseqFormer(nn.Module):
+class Gseqformer(nn.Module):
     def __init__(
-        self,
-        in_channels,
-        labels_num=None,
-        head_num=6,
-        d_model=528,
-        num_GeqEncoder=2,
-        IRB_layers=2,
-        expand=2,
-        feature_dim=1024,
-        drop_connect_ratio=0.25,
-        dropout=0.1,
-        register_hook=False
-    ):
+            self,
+            in_channels,
+            labels_num=None,
+            head_num=6,
+            d_model=528,
+            num_GeqEncoder=2,
+            IRB_layers=2,
+            expand=2,
+            feature_dim=1024,
+            drop_connect_ratio=0.25,
+            dropout=0.1,
+            register_hook=False):
+
         super().__init__()
         self.d_model = d_model
         self.compressConv = MEfficientNet(
-            in_channels, out_channels=d_model, layers=IRB_layers, expand=expand, drop_connect_rate=drop_connect_ratio
-        )
-        self.gSeqEncoder = FormerEncoder(expand, head_num, d_model, pairDim=64,
-                                             dropout=dropout, layers=num_GeqEncoder)
+            in_channels,
+            out_channels=d_model,
+            layers=IRB_layers,
+            expand=expand,
+            drop_connect_rate=drop_connect_ratio)
+
+        self.gSeqEncoder = FormerEncoder(
+            expand,
+            head_num,
+            d_model,
+            pairDim=64,
+            dropout=dropout,
+            layers=num_GeqEncoder)
+
         # 256
         self.conv16_32 = nn.Conv1d(256, 320, kernel_size=3, stride=2, padding=1)
         # 320
         self.conv32_64 = nn.Conv1d(320, d_model, kernel_size=3, stride=2, padding=1)
         self.feature = nn.Linear(d_model, feature_dim)
 
-        self.trans1 = nn.Sequential(
-            nn.ConvTranspose1d(d_model, 320, kernel_size=4, stride=2,
-                               padding=1), Permute(), nn.LayerNorm(320), Permute()
-        )
-        self.trans2 = nn.Sequential(
-            nn.ConvTranspose1d(320, 256, kernel_size=4, stride=2,
-                               padding=1), Permute(), nn.LayerNorm(256), Permute(), nn.GELU()
-        )
-        self.trans3 = nn.Sequential(
-            nn.ConvTranspose1d(256, 128, kernel_size=4, stride=2,
-                               padding=1), Permute(), nn.LayerNorm(128), Permute(), nn.GELU()
-        )
-        self.trans4 = nn.Sequential(
-            nn.ConvTranspose1d(128, 128, kernel_size=4, stride=2,
-                               padding=1), Permute(), nn.LayerNorm(128), Permute(),
-        )
         self.reg = register_hook
         if register_hook:
             self.gradient = None
@@ -59,60 +55,52 @@ class GseqFormer(nn.Module):
     def save_gradient(self, grad):
         self.gradient = grad.clone().detach().cpu()
 
-    def get_cam(self):
-        self.feature_cam = self.feature_cam
+    def get(self):
+        self.feature_cam = self.feature_cam.clone().detach().cpu()
         if self.gradient is None:
             raise "The gradient is None."
-        return self.feature_cam, self.gradient, self.outAtten
+        return self.feature_cam, self.gradient, self.outAtten.clone().detach().cpu()
 
-    def forward_features(self, x, selectMask=None):
-        x64, x32, x16, x8 = self.compressConv(x)  # B, C, L
+    def forward_features(self, x):
+        x64, x32, x16 = self.compressConv(x)  # B, C, L
 
         eX64 = x64.permute([0, 2, 1])
         eX64 = self.gSeqEncoder(eX64)  # B,L,C
         eX64 = eX64.permute(dims=[0, 2, 1]).contiguous()  # B, C, L
 
-        conv16_32 = self.conv16_32(x16)
+        conv16_32 = F.gelu(self.conv16_32(x16))
         branchX32 = x32 + conv16_32
-        conv32_64 = self.conv32_64(branchX32)
+        conv32_64 = F.gelu(self.conv32_64(branchX32))
         rawGateScore = eX64 + conv32_64
         gateScore = torch.softmax(torch.mean(rawGateScore, dim=1, keepdim=True), dim=-1)  # B, 1, L
         eX64 = eX64 * gateScore
-        orieX64 = torch.clone(rawGateScore)  # B, C, L
-        b, c, l = orieX64.shape
-
-        if self.reg:
-            if self.handle is None:
-                print("######### Inject Hook #########")
-                self.handle = eX64.register_hook(self.save_gradient)
-            self.feature_cam = eX64.clone().detach().cpu()
-            self.outAtten = gateScore.clone().detach().cpu()
-
         eX64 = torch.sum(eX64, dim=-1)
-        if selectMask is None:
-            return self.feature(eX64)
-        selectMask = selectMask.unsqueeze(1).bool()
-        t1 = self.trans1(orieX64 + x64)
-        t2 = self.trans2(t1 + x32)
-        t3 = self.trans3(t2 + x16)
-        t4 = self.trans4(t3 + x8)
-        selectTokens = torch.reshape(torch.masked_select(t4, selectMask), shape=[b, 128, -1])
-        return (self.feature(eX64), selectTokens)
 
-    def forward(self, x, selectMask=None):
+        #### Inject hook to get attention tensor ####
+        if self.reg:
+            self.outAtten = gateScore
+            if self.handle is None:
+                print("######### Inject Hook.")
+                self.handle = eX64.register_hook(self.save_gradient)
+            self.feature_cam = eX64
+
+        return self.feature(eX64)
+
+    def forward(self, x):
         """
         :param x: [B, C, L] B: batch size,
-        :return: [B, feature_num] or ([B, feature_num], [B, feature_num, SelectedTokens])
+        :return: [B, feature_num] 
         """
-        return self.forward_features(x, selectMask)
+        rep = self.forward_features(x)
+        return rep
 
 
-class TaxonomicEncoder(nn.Module):
+class TaxaEncoder(nn.Module):
     def __init__(self, dict_size, embedding_dim, num_labels=None, feature_dim=1024, num_layers=4, dropout=0.1):
         super().__init__()
         self.embedding = nn.Embedding(num_embeddings=dict_size, embedding_dim=embedding_dim, padding_idx=0)
         self.encoder = nn.LSTM(input_size=embedding_dim, hidden_size=embedding_dim *
-                               2, num_layers=num_layers, dropout=dropout)
+                            2, num_layers=num_layers, dropout=dropout)
         self.feature = nn.Linear(embedding_dim * 2, feature_dim)
         self.num_labels = num_labels
         if num_labels is not None:
@@ -126,7 +114,10 @@ class TaxonomicEncoder(nn.Module):
 
     def forward(self, x):
         fea = self.forward_features(x)
-        return fea if self.num_labels is None else self.fc(fea)
+        if self.num_labels is None:
+            return fea
+        else:
+            return self.fc(fea)
 
 
 class DeepurifyModel(nn.Module):
@@ -138,6 +129,7 @@ class DeepurifyModel(nn.Module):
         vocab_3Mer_size: int,
         vocab_4Mer_size: int,
         phylum_num: int,
+        species_num: int,
         head_num=8,
         d_model=512,
         num_GeqEncoder=2,
@@ -147,23 +139,21 @@ class DeepurifyModel(nn.Module):
         feature_dim=1024,
         drop_connect_ratio=0.25,
         dropout=0.1,
-        register_hook=False
+        register_hook=False,
     ):
         super().__init__()
-        self.visionEncoder = GseqFormer(
-            in_channels, None, head_num, d_model, num_GeqEncoder, IRB_layers, expand, feature_dim, drop_connect_ratio, dropout, register_hook
-        )
-        self.textEncoder = TaxonomicEncoder(taxo_dict_size, d_model, None, feature_dim, num_lstm_layer, dropout)
+        self.visionEncoder = Gseqformer(in_channels, None, head_num, d_model, num_GeqEncoder,
+                                        IRB_layers, expand, feature_dim, drop_connect_ratio,
+                                        dropout, register_hook)
+        self.textEncoder = TaxaEncoder(taxo_dict_size, d_model, None, feature_dim, num_lstm_layer, dropout)
         self.vocab3MerEmb = nn.Embedding(vocab_3Mer_size, 16, padding_idx=0)
         self.vocab4MerEmb = nn.Embedding(vocab_4Mer_size, 32, padding_idx=0)
-        self.postionalEmb = nn.Parameter(nn.init.kaiming_normal_(
-            torch.randn(1, in_channels, max_model_len)), requires_grad=True)
+        self.postionalEmb = nn.Parameter(
+            nn.init.kaiming_normal_(torch.randn(1, in_channels, max_model_len)), requires_grad=True)
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
-        self.dropout = nn.Dropout(dropout)
-        self.if_noisy_c = nn.Linear(feature_dim, 1)
         self.phy_fc = nn.Linear(feature_dim, phylum_num)
-
-        self.tokenFC = nn.Linear(128, 6)
+        self.spe_fc = nn.Linear(feature_dim, species_num)
+        self.if_noisy_c = nn.Linear(feature_dim, 1)
 
     def concatTensors(self, ori_rev_tensor, feature_3Mer, feature_3Mer_rev_com, feature_4Mer, feature_4Mer_rev_com):
         """
@@ -177,19 +167,9 @@ class DeepurifyModel(nn.Module):
         featrue3MerRevCom = self.vocab3MerEmb(feature_3Mer_rev_com).permute([0, 2, 1])  # [B, C, L]
         featrue4Mer = self.vocab4MerEmb(feature_4Mer).permute([0, 2, 1])  # [B, C, L]
         featrue4MerRevCom = self.vocab4MerEmb(feature_4Mer_rev_com).permute([0, 2, 1])  # [B, C, L]
-        return (
-            torch.cat(
-                [
-                    ori_rev_tensor,
-                    featrue3Mer,
-                    featrue3MerRevCom,
-                    featrue4Mer,
-                    featrue4MerRevCom,
-                ],
-                dim=1,
-            )
-            + self.postionalEmb
-        )
+        embedTensor = torch.cat([ori_rev_tensor, featrue3Mer, featrue3MerRevCom,
+                                featrue4Mer, featrue4MerRevCom], dim=1) + self.postionalEmb
+        return embedTensor  # [B, C, L] C = 108
 
     def gatherValues(self, v1, t2, num_labels):
         """
@@ -216,37 +196,34 @@ class DeepurifyModel(nn.Module):
         texts: torch.Tensor,
         oriPhyTensor=None,
         matchTextTensor=None,
-        outerMisMatchTextTensor=None,
-        selectMask=None,
+        outerMisMatchTextTensor=None
     ):
         """
         texts: [B, (misMatchNum + 1), L], 1 means the match text
         """
-        if (
-            oriPhyTensor is not None or matchTextTensor is not None or outerMisMatchTextTensor is not None or selectMask is not None
-        ):  # This is training state
+        if self.training:
             b = texts.size(0)
             b, num_labels, textLength = texts.shape
-            images = self.concatTensors(ori_rev_tensor, feature_3Mer, feature_3Mer_rev_com,
+            images = self.concatTensors(ori_rev_tensor,
+                                        feature_3Mer, feature_3Mer_rev_com,
                                         feature_4Mer, feature_4Mer_rev_com)
-            images = self.dropout(images)
-            image_features_ori, tokens = self.visionEncoder(images, selectMask)  # [B, D] tokens [B,C,l]
+            image_features_ori = self.visionEncoder(images)  # [B, D] tokens [B,C,l]
             concatedTensor = torch.cat([oriPhyTensor, matchTextTensor, outerMisMatchTextTensor,
-                                       texts.view([b * num_labels, textLength])], dim=0)
+                                        texts.view([b * num_labels, textLength])], dim=0)
             text_features_ori = self.textEncoder(concatedTensor)
 
             # normalized features
             image_features_norm = image_features_ori / image_features_ori.norm(dim=-1, keepdim=True)
             text_features_norm = text_features_ori / text_features_ori.norm(dim=-1, keepdim=True)
             logit_scale = self.logit_scale.exp()
-            oriPhyTensorNorm = text_features_norm[:b]
+            oriPhyTensorNorm = text_features_norm[0:b]
             matchTextTensorNorm = text_features_norm[b: b + b]
             outerMisMatchTextTensorNorm = text_features_norm[2 * b: 3 * b]
             pairTextTensor = text_features_norm[3 * b:]
             pairTextTensor = pairTextTensor.view([b, num_labels, -1])
 
-            tokenProb = self.tokenFC(tokens.permute([0, 2, 1]))
-
+            # print("token shape", tokens.shape)
+            # print("token prob shape", tokenProb.shape)
             # return the result
             return (
                 self.gatherValues(image_features_norm, pairTextTensor, num_labels) * logit_scale,
@@ -257,9 +234,9 @@ class DeepurifyModel(nn.Module):
                 text_features_norm,
                 self.if_noisy_c(image_features_ori),
                 self.phy_fc(image_features_norm),
-                tokenProb,
+                self.spe_fc(image_features_norm)
             )
-        else:  # This is testing state
+        else:
             b = texts.size(0)
             b, num_labels, textLength = texts.shape
             images = self.concatTensors(ori_rev_tensor, feature_3Mer, feature_3Mer_rev_com,
@@ -272,6 +249,7 @@ class DeepurifyModel(nn.Module):
             logit_scale = self.logit_scale.exp()
             pairTextTensor = text_features_norm.view([b, num_labels, -1])
             return self.gatherValues(image_features_norm, pairTextTensor, num_labels) * logit_scale
+
 
     ##### ANNOTATION PART #####
     def annotatedConcatTensors(self, ori_rev_tensor, feature_3Mer, feature_3Mer_rev_com, feature_4Mer, feature_4Mer_rev_com):
@@ -287,16 +265,17 @@ class DeepurifyModel(nn.Module):
             featrue3MerRevCom = self.vocab3MerEmb(feature_3Mer_rev_com).permute([1, 0])  # [C, L]
             featrue4Mer = self.vocab4MerEmb(feature_4Mer).permute([1, 0])  # [C, L]
             featrue4MerRevCom = self.vocab4MerEmb(feature_4Mer_rev_com).permute([1, 0])  # [C, L]
-            return torch.cat([ori_rev_tensor, featrue3Mer, featrue3MerRevCom, featrue4Mer, featrue4MerRevCom], dim=0) + self.postionalEmb.squeeze(0)
+        return torch.cat([ori_rev_tensor, featrue3Mer, featrue3MerRevCom, featrue4Mer, featrue4MerRevCom], dim=0) + self.postionalEmb.squeeze(0)
 
     def visionRepNorm(self, images):
         with torch.no_grad():
             image_features_ori = self.visionEncoder(images)  # [B, D]
-            return image_features_ori / image_features_ori.norm(dim=-1, keepdim=True)
+        return image_features_ori / image_features_ori.norm(dim=-1, keepdim=True)
 
     def visionRep(self, images):
         with torch.no_grad():
-            return self.visionEncoder(images)
+            image_features_ori = self.visionEncoder(images)  # [B, D]
+        return image_features_ori
 
     def textRepNorm(self, texts):
         with torch.no_grad():
@@ -304,11 +283,11 @@ class DeepurifyModel(nn.Module):
             text_features_ori = self.textEncoder(texts.view([b * num_labels, textLength]))  # [B * (misMatchNum + 1), D]
             text_features_norm = text_features_ori / text_features_ori.norm(dim=-1, keepdim=True)
             text_features_norm = text_features_norm.view([b, num_labels, -1])
-            return text_features_norm
+        return text_features_norm
 
     def textRep(self, texts):
         with torch.no_grad():
             b, num_labels, textLength = texts.shape
             text_features_ori = self.textEncoder(texts.view([b * num_labels, textLength]))  # [B * (misMatchNum + 1), D]
             text_features_ori = text_features_ori.view([b, num_labels, -1])
-            return text_features_ori
+        return text_features_ori

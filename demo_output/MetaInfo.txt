@@ -1,4 +1,0 @@
-bin.1_0.fa	4.17	0.0	LowQuality	Firmicutes
-bin.2_0.fa	34.48	0.0	LowQuality	Firmicutes
-bin.3_0.fa	98.93	0.48	HighQuality	Bacteroidetes@Bacteroidia@Bacteroidales@Rikenellaceae@Alistipes
-bin.4_0.fa	73.75	3.24	MediumQuality	Firmicutes

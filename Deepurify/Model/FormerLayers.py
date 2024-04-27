@@ -1,9 +1,11 @@
 import math
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from Deepurify.Model.Convolutions import Permute
+
+from .Convolutions import Permute
 
 
 class FeedForward(nn.Module):
@@ -18,50 +20,68 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         x = self.ln(x)
-        x1 = self.act(self.linear1(x))
-        x2 = self.linear2(x1)
-        x2 = self.dropout(x2)
-        return x2
+        x = self.linear1(x)
+        x = self.dropout(x)
+        x = self.act(x)
+        x = self.linear2(x)
+        return x
 
 
-class InvertedResidualBlcok(nn.Module):
+class ConvFeedForward(nn.Module):
     def __init__(self, d_model: int, expand: float):
         super().__init__()
         in_cha = int(d_model * expand)
-        self.expension = nn.Sequential(nn.Conv1d(d_model, in_cha, kernel_size=3, padding=1), Permute(), nn.LayerNorm(in_cha, eps=1e-6), Permute(), nn.GELU())
-        self.depthwise_conv = nn.Conv1d(in_cha, in_cha, kernel_size=3, stride=1, padding=1, groups=in_cha, bias=False)
-        self.pointwise_conv = nn.Sequential(nn.Conv1d(in_cha, d_model, kernel_size=1, stride=1), Permute(), nn.LayerNorm(d_model, eps=1e-6))
+        self.ln = nn.LayerNorm(d_model, eps=1e-6)
+        self.expension = nn.Sequential(
+            Permute(),
+            nn.Conv1d(
+                d_model,
+                in_cha,
+                kernel_size=3,
+                padding=1),
+            nn.GELU())
+        self.depthwise_conv = nn.Conv1d(
+            in_cha, in_cha,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            groups=in_cha,
+            bias=False)
+        self.pointwise_conv = nn.Sequential(
+            nn.Conv1d(in_cha, d_model, kernel_size=1, stride=1),
+            Permute())
 
     def forward(self, x):
         """
         x: [B, L, C]
         """
-        x = x.transpose(2, 1)
+        x = self.ln(x)
         x = self.pointwise_conv(self.depthwise_conv(self.expension(x)))
         return x
 
 
-class SpatialConv(nn.Module):
+class ConvAttention(nn.Module):
     def __init__(self, in_channels: int):
         super().__init__()
-        in_cha = 45
-        self.conv0 = nn.Sequential(nn.Conv2d(in_channels, in_cha, kernel_size=5, padding=2), nn.GELU(), nn.GroupNorm(3, in_cha))
-        self.conv1 = nn.Conv2d(in_cha, in_cha, kernel_size=3, stride=1, padding=1, bias=False, groups=in_cha)
-        self.conv2 = nn.Conv2d(in_cha, in_channels, kernel_size=1, stride=1)
+        self.conv = nn.Conv2d(
+            in_channels,
+            in_channels,
+            kernel_size=5,
+            padding=2)
 
     def forward(self, x):
         """
         x: [B, H, L, L]
         """
-        return self.conv2(self.conv1(self.conv0(x)))
+        return self.conv(x)
 
 
-class SpatialAttention(nn.Module):
+class Conv3ChannelAttention(nn.Module):
     def __init__(self, in_channels: int) -> None:
         super().__init__()
-        self.conv0 = SpatialConv(in_channels)
-        self.conv1 = SpatialConv(in_channels)
-        self.conv2 = SpatialConv(in_channels)
+        self.conv0 = ConvAttention(in_channels)
+        self.conv1 = ConvAttention(in_channels)
+        self.conv2 = ConvAttention(in_channels)
 
     def forward(self, x):
         """
@@ -74,7 +94,7 @@ class SpatialAttention(nn.Module):
         return torch.sum(stacked, dim=1, keepdim=True)
 
 
-class TensorRowWiseGateSelfAttention(nn.Module):
+class RowWiseGateSelfAttention(nn.Module):
     def __init__(self, h, d_model, pairDim=128, dropout=0.1):
         super().__init__()
         assert d_model % h == 0, ValueError("Error with d_model and the number of heads.")
@@ -89,7 +109,7 @@ class TensorRowWiseGateSelfAttention(nn.Module):
         self.ln2 = nn.LayerNorm(pairDim, eps=1e-6)
         self.q_linear = nn.Linear(d_model // 3, d_model // 3)
         self.v_linear = nn.Linear(d_model // 3, d_model // 3)
-        self.conv3d = SpatialAttention(h)
+        self.conv3d = Conv3ChannelAttention(h)
         self.k_linear = nn.Linear(d_model // 3, d_model // 3)
         self.gate_linear = nn.Linear(d_model // 3, d_model // 3)
         self.pair_linear = nn.Linear(pairDim, h)
@@ -97,7 +117,6 @@ class TensorRowWiseGateSelfAttention(nn.Module):
 
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
-        self.dropout3 = nn.Dropout(dropout)
         self.out = nn.Linear(d_model, d_model)
 
     def forward(self, x, pairX):
@@ -120,19 +139,21 @@ class TensorRowWiseGateSelfAttention(nn.Module):
         q = q.permute([0, 1, 3, 2, 4])  # [B, 3,  h, L, d_k]
         v = v.permute([0, 1, 3, 2, 4])  # [B, 3,  h, L, d_k]
 
-        qkMatrix = torch.matmul(q, k.transpose(-2, -1)) / self.div  # [B, 3, h, L, L]
+        qkMatrix = torch.matmul(q, k.transpose(-2, -1))  # [B, 3, h, L, L]
         pairBias = self.pair_linear(pairX).permute([0, 3, 1, 2]).unsqueeze(1)  # [B, 1, h, L, L]
         oriQK = qkMatrix + pairBias
         convQK = self.conv3d(oriQK)
-        score = F.softmax(oriQK + convQK, dim=-1)
+        qk = (oriQK + convQK) / self.div
+        score = F.softmax(qk, dim=-1)
         score = self.dropout1(score)
         h_outs = torch.matmul(score, v) * torch.sigmoid(g)  # [B, 3, h, L, d_k]
         h_outs = h_outs.permute([0, 3, 1, 2, 4]).contiguous().view([-1, L, self.d_model])
-        rawScoreMean = F.gelu(torch.mean(oriQK + convQK, dim=1).permute([0, 2, 3, 1]).contiguous())
-        return self.dropout2(self.out(h_outs)) + ori_x * self.g, self.pair_linear_rev(rawScoreMean)
+        rawScoreMean = F.gelu(torch.mean(qk, dim=1).permute([0, 2, 3, 1]).contiguous())
+        return self.dropout2(self.out(h_outs)) + ori_x * self.g, \
+            self.pair_linear_rev(rawScoreMean)
 
 
-class TensorColWiseGateSelfAttention(nn.Module):
+class ColWiseGateSelfAttention(nn.Module):
     def __init__(self, h, d_model, dropout=0.1):
         super().__init__()
         assert d_model % h == 0, ValueError("Error with d_model and the number of heads.")
@@ -176,14 +197,13 @@ class TensorColWiseGateSelfAttention(nn.Module):
         return self.dropout(self.out(h_outs)) + ori_x * self.g
 
 
-class BlockAttentionUpdate(nn.Module):
+class OuterProductPair(nn.Module):
     def __init__(self, d_model, pairDim=128):
         super().__init__()
         assert d_model % 3 == 0, ValueError("The d_model does not divide 3.")
         self.ln = nn.LayerNorm(d_model, eps=1e-6)
         self.trans1 = nn.Linear(d_model // 3, 256)
         self.trans2 = nn.Linear(32, pairDim)
-
         self.attenTrans = nn.Linear(64, 64)
 
     def forward(self, x):
@@ -194,11 +214,12 @@ class BlockAttentionUpdate(nn.Module):
         B, L, C = x.shape
         x = self.ln(x)
         x = x.view([-1, L, 3, C // 3])
-        trans = self.trans1(x).view([-1, L, 3, 32, 8])  # [B, L, 3, h, 8]
-        outer1 = trans.unsqueeze(-1)  # [B, L, 3, h, 8, 1]
-        outer2 = trans.unsqueeze(4)  # [B, L, 3, h, 1, 8]
+        trans = self.trans1(x).view([-1, L, 3, 32, 8])  # [B, L, 3, 32, 8]
+        outer1 = trans.unsqueeze(-1)  # [B, L, 3, 32, 8, 1]
+        outer2 = trans.unsqueeze(4)  # [B, L, 3, 32, 1, 8]
         outerproduct = torch.matmul(outer1, outer2)
-        meanOut = torch.mean(outerproduct, dim=2, keepdim=False).view([-1, L, 32, 64]).contiguous().permute([0, 2, 1, 3])  # [B, h, L, 64]
+        meanOut = torch.mean(outerproduct, dim=2, keepdim=False).\
+            view([-1, L, 32, 64]).contiguous().permute([0, 2, 1, 3])  # [B, 32, L, 64]
         meanTrans = F.gelu(self.attenTrans(meanOut).contiguous())
         rawScore = torch.matmul(meanOut, meanTrans.transpose(-1, -2)).permute([0, 2, 3, 1])
         return self.trans2(rawScore)
@@ -208,22 +229,15 @@ class FormerBlock(nn.Module):
     def __init__(self, expand, h, d_model, pairDim, dropout, if_last_layer=False):
         super().__init__()
         # print("The dimension of model is: ", d_model)
-        self.conv = InvertedResidualBlcok(d_model, expand)
-        self.outPair = BlockAttentionUpdate(d_model, pairDim)
-        self.rowWiseAtten = TensorRowWiseGateSelfAttention(h, d_model, pairDim, dropout)
-        self.colWiseAtten = TensorColWiseGateSelfAttention(h, d_model, dropout)
+        self.conv = ConvFeedForward(d_model, expand)
+        self.outPair = OuterProductPair(d_model, pairDim)
+        self.rowWiseAtten = RowWiseGateSelfAttention(h, d_model, pairDim, dropout)
+        self.colWiseAtten = ColWiseGateSelfAttention(h, d_model, dropout)
         self.ffw = FeedForward(d_model, dropout)
-        self.ga = nn.parameter.Parameter(data=torch.ones(1), requires_grad=True)
-        self.gc = nn.parameter.Parameter(data=torch.ones(1), requires_grad=True)
-        self.gf = nn.parameter.Parameter(data=torch.ones(1), requires_grad=True)
 
         self.if_last_layer = if_last_layer
         if not if_last_layer:
-            self.gp = nn.parameter.Parameter(data=torch.ones(1), requires_grad=True)
             self.pairFFW = FeedForward(pairDim, dropout)
-        else:
-            self.register_buffer("gp", None)
-            self.register_buffer("pairFFW", None)
 
     def forward(self, x, pairX):
         """
@@ -231,33 +245,27 @@ class FormerBlock(nn.Module):
         pairX: [B, L, L, pairDim]
         """
         # Conv
-        covOri = x
-        x = self.conv(x) + covOri * self.gc
-        # Attention
-        attenOri = x
+        x = self.conv(x) + x
+        # Attention col
         x = self.colWiseAtten(x)
+        # Attention row
         pairX = pairX + self.outPair(x)
-        x, rawScoreTrans = self.rowWiseAtten(x, pairX)
-        x = x + attenOri * self.ga
-        pairX = pairX + rawScoreTrans.contiguous()
+        x, pairX = self.rowWiseAtten(x, pairX)
         # FFW
-        ffwOri = x
-        pairXMean = torch.mean(pairX, dim=3).softmax(dim=-1)  # [B, L, L]
         if not self.if_last_layer:
-            return self.ffw(torch.matmul(pairXMean, x)) + ffwOri * self.gf, pairX * self.gp + self.pairFFW(pairX)
+            return self.ffw(x) + x, self.pairFFW(pairX)
         else:
-            return self.ffw(torch.matmul(pairXMean, x)) + ffwOri * self.gf
+            return self.ffw(x) + x
 
 
 class FormerEncoder(nn.Module):
     def __init__(self, expand, h, d_model, pairDim, dropout, layers):
         super().__init__()
+        block = []
         self.layers = layers
         self.pairDim = pairDim
-        block = [
-            FormerBlock(expand, h, d_model, pairDim, dropout, False)
-            for _ in range(layers - 1)
-        ]
+        for _ in range(layers - 1):
+            block.append(FormerBlock(expand, h, d_model, pairDim, dropout, False))
         block.append(FormerBlock(expand, h, d_model, pairDim, dropout, True))
         self.module_list = nn.ModuleList(block)
 

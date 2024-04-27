@@ -20,8 +20,9 @@ class FocalBCEwithLogitLoss(nn.Module):
             targets = targets.squeeze(-1)
         if alphas is None:
             alphas = torch.ones(outputs.shape, device=outputs.device)
-        elif len(alphas.shape) >= 2:
-            alphas = alphas.squeeze(-1)
+        else:
+            if len(alphas.shape) >= 2:
+                alphas = alphas.squeeze(-1)
         postiveProb = torch.sigmoid(outputs)
         postiveProb = torch.clip(postiveProb, min=1e-5, max=1.0 - 1e-5)
         negtiveProb = 1.0 - postiveProb
@@ -55,13 +56,14 @@ class FocalCrossEntropyLoss(nn.Module):
         alphas = alphas[:, None]
         if len(labels.shape) != 2:
             labels = labels[:, None]
-        logprobsTruth = torch.clamp(torch.gather(logprobs, dim=-1, index=labels), min=-100.0, max=-1e-5)
-        with torch.no_grad():
-            moderate = (1.0 - torch.exp(logprobsTruth)) ** self.gamma
-            if moderate.sum().isnan().float() != 0:
-                moderate = torch.ones_like(moderate).float().to(logprobsTruth.device)
+        logprobsTruth = torch.clamp(torch.gather(logprobs, dim=-1, index=labels), min=-100000.0, max=-1e-8)
+        moderate = (1.0 - torch.exp(logprobsTruth)) ** self.gamma
+        if moderate.sum().isnan().float() != 0:
+            moderate = torch.ones_like(moderate).float().to(logprobsTruth.device)
         loss = -alphas * moderate * logprobsTruth
-        return loss.sum() if sum_mean == "sum" else loss.sum() / alphas.sum()
+        if sum_mean == "sum":
+            return loss.sum()
+        return loss.sum() / alphas.sum()
 
 
 def varianceLoss(z, val=1.0):
@@ -69,7 +71,8 @@ def varianceLoss(z, val=1.0):
     z: [B, D]
     """
     std_z = torch.sqrt(z.var(dim=0, keepdim=True) + 1e-4)
-    return torch.mean(F.relu(val - std_z))
+    std_loss = torch.mean(F.relu(val - std_z))
+    return std_loss
 
 
 def cosineLoss(oriPhyNormTensor, matchTextNormTensor, innerThre, outerThre, innerORouter="inner"):
@@ -95,7 +98,8 @@ def covarianceLoss(z):
     cov_z = (z.T @ z) / (n - 1)
     cov_mask = 1.0 - torch.eye(feature_dim)
     cov_mask = cov_mask.to(z.device)
-    return (cov_z * cov_mask).pow_(2).mean()
+    cov_loss = (cov_z * cov_mask).pow_(2).mean()
+    return cov_loss
 
 
 if __name__ == "__main__":
