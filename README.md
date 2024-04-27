@@ -54,7 +54,7 @@ For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
 source .bashrc
 ```
 
-- You can set the **'--db_folder_path'** in CLI to the path of 'Deepurify-DB' folder if you do not want to set the environment variable.
+- **You can set the '--db_folder_path' in CLI to the path of 'Deepurify-DB' folder if you do not want to set the environment variable.**
 
 
 ## Running Deepurify
