@@ -65,7 +65,7 @@ source .bashrc
 
 
 ## Running Deepurify
-**1.  You can run the Deepurify with 'clean' mode through the **cleanMAGs** function.**
+**1.  You can run Deepurify with 'clean' mode through the **cleanMAGs** function.**
 ```
 from Deepurify.clean_func import cleanMAGs
 
@@ -75,8 +75,8 @@ if __name__ == "__main__":
     output_folder = "./output_folder/"
     cleanMAGs(
         output_bin_folder_path=output_folder,
-        batch_size_per_gpu=32,
-        each_gpu_threads=2,
+        batch_size_per_gpu=4,
+        each_gpu_threads=1,
         input_bins_folder=input_folder,
         bin_suffix=bin_suffix,
         gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125], # enable 8 GPUs with equal work ratios.
@@ -96,8 +96,8 @@ if __name__ == "__main__":
     output_folder = "./output_folder/"
     cleanMAGs(
         output_bin_folder_path=output_folder,
-        batch_size_per_gpu=32,
-        each_gpu_threads=2,
+        batch_size_per_gpu=4,
+        each_gpu_threads=1,
         contig_fasta_path=contig_fasta_path,
         sorted_bam_file=bam_file_path,
         gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 8 GPUs with equal work ratios.
@@ -131,15 +131,15 @@ optional arguments:
                         result in significantly slower processing speed. It is recommended to provide at least one GPU (>= GTX-1060-6GB) for accelerating the speed.
   --batch_size_per_gpu BATCH_SIZE_PER_GPU
                         The batch size per GPU determines the number of sequences that will be loaded onto each GPU. This parameter is only applicable if the --gpu_num option is set to a
-                        value greater than 0. The default value is 4, meaning that one sequences will be loaded per GPU batch. The batch size for CPU is 4.
+                        value greater than 0. The default value is 4, meaning that one sequence will be loaded per GPU batch. The batch size for the CPU is 4.
   --each_gpu_threads EACH_GPU_THREADS
-                        The number of threads per GPU (or CPU) determines the parallelism level during contigs' inference stage. If the value of --gpu_num is greater than 0, each GPU will
-                        have a set number of threads to do inference. Similarly, if --gpu_num is set to 0 and the code will run on CPU, the specified number of threads will be used. By
+                        The number of threads per GPU (or CPU) determines the parallelism level during the contigs' inference stage. If the value of --gpu_num is greater than 0, each GPU will
+                        have a set number of threads to do inference. Similarly, if --gpu_num is set to 0 and the code will run on the CPU, the specified number of threads will be used. By
                         default, the number of threads per GPU or CPU is set to 1. The --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per
                         thread.
   --overlapping_ratio OVERLAPPING_RATIO
                         The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. By default, the overlapping ratio is set to 0.5.
-                        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 0.5 overlap between consecutive
+                        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 0.5 overlaps between consecutive
                         subsequences.
   --cut_seq_length CUT_SEQ_LENGTH
                         The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. The default setting is 8192, which is also the
@@ -161,7 +161,7 @@ optional arguments:
                         files will be stored in the parent folder of the '--input_path' location. However, you have the option to specify a different folder path to store these temporary
                         files if needed.
   --db_folder_path DB_FOLDER_PATH
-                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
+                        The path of the database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
                         to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
                         provided.
   --model_weight_path MODEL_WEIGHT_PATH
@@ -194,20 +194,20 @@ optional arguments:
   -o OUTPUT_PATH, --output_path OUTPUT_PATH
                         The folder used to output cleaned MAGs.
   --binning_mode BINNING_MODE
-                        The semibin2, concoct, metabat2 will all be run if this parameter is None. The other modes are: 'semibin2', 'concoct', and 'metabat2'. Defaults to None.
+                        The semibin2, concoct, and metabat2 will all be run if this parameter is None. The other modes are: 'semibin2', 'concoct', and 'metabat2'. Defaults to None.
   --gpu_num GPU_NUM     The number of GPUs to be used can be specified. Defaults to 1. If you set it to 0, the code will utilize the CPU. However, please note that using the CPU can
                         result in significantly slower processing speed. It is recommended to provide at least one GPU (>= GTX-1060-6GB) for accelerating the speed.
   --batch_size_per_gpu BATCH_SIZE_PER_GPU
                         The batch size per GPU determines the number of sequences that will be loaded onto each GPU. This parameter is only applicable if the --gpu_num option is set to a
-                        value greater than 0. The default value is 4, meaning that one sequences will be loaded per GPU batch. The batch size for CPU is 4.
+                        value greater than 0. The default value is 4, meaning that one sequence will be loaded per GPU batch. The batch size for the CPU is 4.
   --each_gpu_threads EACH_GPU_THREADS
-                        The number of threads per GPU (or CPU) determines the parallelism level during contigs' inference stage. If the value of --gpu_num is greater than 0, each GPU will
-                        have a set number of threads to do inference. Similarly, if --gpu_num is set to 0 and the code will run on CPU, the specified number of threads will be used. By
+                        The number of threads per GPU (or CPU) determines the parallelism level during the contigs' inference stage. If the value of --gpu_num is greater than 0, each GPU will
+                        have a set number of threads to do inference. Similarly, if --gpu_num is set to 0 and the code will run on the CPU, the specified number of threads will be used. By
                         default, the number of threads per GPU or CPU is set to 1. The --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per
                         thread.
   --overlapping_ratio OVERLAPPING_RATIO
                         The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. By default, the overlapping ratio is set to 0.5.
-                        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 0.5 overlap between consecutive
+                        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 0.5 overlaps between consecutive
                         subsequences.
   --cut_seq_length CUT_SEQ_LENGTH
                         The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. The default setting is 8192, which is also the
@@ -229,7 +229,7 @@ optional arguments:
                         files will be stored in the parent folder of the '--input_path' location. However, you have the option to specify a different folder path to store these temporary
                         files if needed.
   --db_folder_path DB_FOLDER_PATH
-                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
+                        The path of the database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
                         to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
                         provided.
   --model_weight_path MODEL_WEIGHT_PATH
@@ -242,7 +242,7 @@ optional arguments:
 Please run 'deepurify re-bin -h' for more details.
 
 
-## Files in output directory
+## Files in the output directory
 - #### The purified MAGs.
 
 - #### MetaInfo.tsv
