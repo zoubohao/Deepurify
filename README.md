@@ -21,14 +21,14 @@ Please independently install the following tools and ensure their proper functio
 
 
 ## Installation:
-#### FIRST STEP (Create Environment)
+#### FIRST STEP (Create Conda Environment)
 Create deepurify's conda environment by using this command:
 
 ```
 conda env create -n deepurify -f deepurify-conda-env.yml
 ```
 
-Do not forget to download the database files for **CheckM2 !!!**
+Do not forget to download the database files for **CheckM2 !!!** and set environmental variable CHECKM2DB using: ```export CHECKM2DB="path/to/database"```
 
 and Please download PyTorch v2.1.0 -cu121 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
 ```
@@ -48,7 +48,7 @@ pip install Deepurify==2.3.2
 ## Download Files and Set Environment Variable for Running
 - Download the database (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1FXpxoXFYHcX9QAFe7U6zfM8YjalxNLFk/view?usp=sharing)**.
 
-- Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environment variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
+- Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environmental variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
 ```
 export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
@@ -59,7 +59,7 @@ For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
 source .bashrc
 ```
 
-- **You can set the '--db_folder_path' in CLI to the path of 'Deepurify-DB' folder if you do not want to set the environment variable.**
+- **You can set the '--db_folder_path' in CLI to the path of 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
 
 ## Running Deepurify
@@ -159,8 +159,8 @@ optional arguments:
                         files will be stored in the parent folder of the '--input_path' location. However, you have the option to specify a different folder path to store these temporary
                         files if needed.
   --db_folder_path DB_FOLDER_PATH
-                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set
-                        to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly
+                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
+                        to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
                         provided.
   --model_weight_path MODEL_WEIGHT_PATH
                         The path of model weight. (In database folder) Defaults to None.
@@ -227,8 +227,8 @@ optional arguments:
                         files will be stored in the parent folder of the '--input_path' location. However, you have the option to specify a different folder path to store these temporary
                         files if needed.
   --db_folder_path DB_FOLDER_PATH
-                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set
-                        to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly
+                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
+                        to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
                         provided.
   --model_weight_path MODEL_WEIGHT_PATH
                         The path of model weight. (In database folder) Defaults to None.
