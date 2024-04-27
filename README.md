@@ -195,7 +195,7 @@ optional arguments:
   -o OUTPUT_PATH, --output_path OUTPUT_PATH
                         The folder used to output cleaned MAGs.
   --binning_mode BINNING_MODE
-                        The semibin2, concoct, and metabat2 will all be run if this parameter is None. The other modes are: 'semibin2', 'concoct', and 'metabat2'. Defaults to None.
+                        If this parameter is None, then the semibin2, concoct, and metabat2 will all run. Defaults to None. The other modes are: 'semibin2', 'concoct', and 'metabat2'.
   --gpu_num GPU_NUM     The number of GPUs to be used can be specified. Defaults to 1. If you set it to 0, the code will utilize the CPU. However, please note that using the CPU can
                         result in significantly slower processing speed. It is recommended to provide at least one GPU (>= GTX-1060-6GB) for accelerating the speed.
   --batch_size_per_gpu BATCH_SIZE_PER_GPU
@@ -255,7 +255,7 @@ This file contains the following columns:
 4. MAG quality (fourth column),
 
 ## Minimum System Requirements for Running Deepurify
-- System: Linux (>= Ubuntu 22.04.2 LTS)
+- System: Linux
 - CPU: No restriction.
 - RAM: >= 32 GB
 - GPU: The GPU memory must be equal to or greater than 6GB. (5273MB)
