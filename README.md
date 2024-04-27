@@ -58,7 +58,7 @@ source .bashrc
 
 
 ## Running Deepurify
-1.  You can run the Deepurify with 'clean' mode through the **cleanMAGs** function.
+**1.  You can run the Deepurify with 'clean' mode through the **cleanMAGs** function.**
 ```
 from Deepurify.clean_func import cleanMAGs
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 ```
 
 
-2.  You can run the Deepurify with 're-bin' mode through the **cleanMAGs** function.
+**2.  You can run the Deepurify with 're-bin' mode through the **cleanMAGs** function.**
 ```
 from Deepurify.clean_func import cleanMAGs
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 Please refer to the documentation of this function for more details.
 
 
-3.  You can run Deepurify with 'clean' mode through the following command:
+**3.  You can run Deepurify with 'clean' mode through the following command:**
 ```
 deepurify clean  -i ./input_folder/ -o ./output_folder/ --bin_suffix fasta --gpu_num 1 --each_gpu_threads 1
 ```
@@ -167,7 +167,7 @@ optional arguments:
 Please run 'deepurify clean -h' for more details.
 
 
-4.  You can run Deepurify with 're-bin' mode through the following command:
+**4.  You can run Deepurify with 're-bin' mode through the following command:**
 ```
 deepurify re-bin  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1
 ```
