@@ -21,7 +21,7 @@ Please independently install the following tools and ensure their proper functio
 
 
 ## Installation:
-### FIRST STEP
+#### FIRST STEP (Create Environment)
 Create deepurify's conda environment by using this command:
 
 ```
@@ -30,7 +30,7 @@ conda env create -n deepurify -f deepurify-conda-env.yml
 
 and Please download PyTorch v2.0.1 -cu118 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
 
-### SECOND STEP
+#### SECOND STEP (Install Codes)
 After preparing the env, the code of Deepurify can be installed via pip. 
 
 ```
