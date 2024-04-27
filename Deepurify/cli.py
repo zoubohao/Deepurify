@@ -5,10 +5,9 @@ import argparse
 import os
 import sys
 from typing import Dict, List
-from Deepurify.IOUtils import writePickle
 
 from Deepurify.clean_func import cleanMAGs
-from Deepurify.DataTools.DataUtils import insert
+from Deepurify.Utils.DataUtils import insert
 
 
 def bulid_tree(weight_file_path: str) -> Dict:
@@ -16,7 +15,7 @@ def bulid_tree(weight_file_path: str) -> Dict:
         levelsInfor = oneLine.split("@")
         return levelsInfor
 
-    taxonomyTree = {"TaxoLevel": "superkingdom", "Name": "bacteria", "Children": []}
+    taxonomyTree = {"TaxoLevel": "root", "Name": "root", "Children": []}
     with open(weight_file_path, mode="r") as rh:
         k = 0
         for line in rh:
@@ -38,186 +37,360 @@ def build_taxo_vocabulary(weight_file_path: str) -> Dict[str, int]:
     return vocab_dict
 
 
-def cli():
+def main():
     myparser = argparse.ArgumentParser(
-        prog=os.path.basename(sys.argv[0]), description="Deepurify is a tool to remove the contamination in MAGs."
+        prog=os.path.basename(sys.argv[0]), description="Deepurify is a tool to improving the quality of MAGs."
     )
     subparsers = myparser.add_subparsers(dest="command")
 
-    clean_parser = subparsers.add_parser("clean", help="Filtering the contamination in MAGs.")
+    clean_parser = subparsers.add_parser("clean", help="The **CLEAN** mode. Only clean the MAGs in the input folder.")
 
     # Add parameters
     clean_parser.add_argument(
         "-i",
         "--input_path",
         required=True,
-        help="The input folder containing MAGs")
+        help="The folder of input MAGs.")
     clean_parser.add_argument(
         "-o",
         "--output_path",
         required=True,
-        help="The output folder containing decontaminated MAGs.")
+        help="The folder used to output cleaned MAGs.")
     clean_parser.add_argument(
         "--bin_suffix",
         required=True,
-        help="The suffix of MAG files.",
+        help="The bin suffix of MAG files.",
         type=str)
-
 
     ### optional ###
     clean_parser.add_argument(
         "--gpu_num",
         default=1,
-        help="""The number of GPUs to be used, with the default value being 1. 
-        Setting it to 0 will make the code use the CPU, but it's important to note that using the CPU can result in significantly slower processing speeds. 
-        For better performance, it is recommended to have at least one GPU with a memory capacity of 3GB or more.""",
+        help="""The number of GPUs to be used can be specified. Defaults to 1.
+        If you set it to 0, the code will utilize the CPU. 
+        However, please note that using the CPU can result in significantly slower processing speed. 
+        It is recommended to provide at least one GPU (>= GTX-1060-6GB) for accelerating the speed.""",
         type=int
     )
     clean_parser.add_argument(
         "--batch_size_per_gpu",
-        default=1,
-        help="""The --batch_size_per_gpu defines the number of sequences loaded onto each GPU simultaneously. 
-        This parameter is relevant only when the --gpu_num option is set to a value greater than 0. 
-        The default batch size is 1, which means that one sequence will be loaded per GPU by default.
+        default=4,
+        help="""The batch size per GPU determines the number of sequences that will be loaded onto each GPU. 
+        This parameter is only applicable if the --gpu_num option is set to a value greater than 0. 
+        The default value is 4, meaning that one sequences will be loaded per GPU batch.
+        The batch size for CPU is 4.
         """,
         type=int)
     clean_parser.add_argument(
-        "--num_threads_per_device",
+        "--each_gpu_threads",
         default=1,
         type=int,
-        help="""The --num_threads_per_device (GPU or CPU) controls the level of parallelism during the contigs' lineage inference stage. 
-        If the --gpu_num option is set to a value greater than 0, each GPU will utilize this specified number of threads for inference. 
-        Likewise, if --gpu_num is set to 0 and the code runs on a CPU, the same number of threads will be employed. 
-        By default, each GPU or CPU uses 1 thread. 
-        The --batch_size_per_gpu value will be divided by this value to calculate the batch size per thread.
+        help="""The number of threads per GPU (or CPU) determines the parallelism level during contigs' inference stage. 
+        If the value of --gpu_num is greater than 0, each GPU will have a set number of threads to do inference. 
+        Similarly, if --gpu_num is set to 0 and the code will run on CPU, the specified number of threads will be used. 
+        By default, the number of threads per GPU or CPU is set to 1. 
+        The --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per thread.
         """
     )
     clean_parser.add_argument(
-        "--num_threads_call_genes",
-        default=12,
-        type=int,
-        help="The number of threads to call genes. Defaults to 12.")
+        "--overlapping_ratio",
+        default=0.5,
+        type=float,
+        help="""The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. 
+        By default, the overlapping ratio is set to 0.5. 
+        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 0.5 overlap 
+        between consecutive subsequences.
+        """
+    )
     clean_parser.add_argument(
-        "--checkM_process_num",
-        default=1,
-        choices=[1, 2, 3, 6],
+        "--cut_seq_length",
+        default=8192,
         type=int,
-        help="The number of processes to run CheckM simultaneously. Defaults to 1.")
+        help="""The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. 
+        The default setting is 8192, which is also the maximum length allowed during training. 
+        If a contig's length surpasses this threshold, it will be divided into smaller subsequences with lengths equal to or less 
+        than the cut_seq_length.
+        """)
     clean_parser.add_argument(
-        "--num_threads_per_checkm",
-        default=12,
+        "--mag_length_threshold",
+        default=200000,
         type=int,
-        help="The number of threads to run a single CheckM process. Defaults to 12.")
+        help="""The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs). 
+        The default threshold is set to 200,000, which represents the total length of the contigs in base pairs (bp). 
+        MAGs with a total contig length equal to or greater than this threshold will be considered for further analysis or inclusion, 
+        while MAGs with a total contig length below the threshold may be filtered out.
+        """,
+    )
+    clean_parser.add_argument(
+        "--num_process",
+        default=None,
+        type=int,
+        help="The maximum number of threads will be used. All CPUs will be used if it is None. Defaults to None")
+    clean_parser.add_argument(
+        "--topk_or_greedy_search",
+        default="topk",
+        choices=["topk", "greedy"],
+        type=str,
+        help="""Topk searching or greedy searching to label a contig. Defaults to "topk".
+        """
+    )
+    clean_parser.add_argument(
+        "--topK_num",
+        default=3,
+        type=int,
+        help="""During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the 
+        highest cosine similarity with the contig's encoded vector. By default, the value of k is set to 3, meaning that the three most similar 
+        nodes in terms of cosine similarity will be considered for labeling the contig. 
+        Please note that this parameter does not have any effect when using the greedy search approach (topK_num=1). Defaults to 3.
+        """)
     clean_parser.add_argument(
         "--temp_output_folder",
         default=None,
         type=str,
         help="""
-        The folder stores the temporary files, which are generated during the running Deepurify. 
-        If no path is provided (set to None), the temporary files will be stored in the parent folder of the '--input_bin_folder_path' location by default.
+        The temporary files generated during the process can be stored in a specified folder path. 
+        By default, if no path is provided (i.e., set to None), the temporary files will be stored in the parent folder of the '--input_path' location. 
+        However, you have the option to specify a different folder path to store these temporary files if needed.
         """,
     )
     clean_parser.add_argument(
-        "--output_bins_meta_info_path",
-        default=None,
-        type=str,
-        help="""
-        The path for a text file to record meta information, including the evaluated results of the output MAGs.
-        If no path is provided (set to None), the file will be automatically created in the '--output_bin_folder_path' directory by default.
-        """,
-    )
-    clean_parser.add_argument(
-        "--info_files_path",
+        "--db_folder_path",
         default=None,
         help="""
-        The files in the 'DeepurifyInfoFiles' folder are a crucial requirement for running Deepurify. 
-        If you don't provide a path explicitly (set to None), it is assumed that the 'DeepurifyInfoFiles' environment variable has been properly configured to point to the necessary folder. 
-        Ensure that the 'DeepurifyInfoFiles' environment variable is correctly set up if you don't specify the path.
+        The path of database folder.
+        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to 
+        point to the appropriate folder. 
+        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
         """,
         type=str
     )
     clean_parser.add_argument(
-        "--simulated_MAG",
-        default=False,
-        type=bool,
-        choices=[True, False],
-        help="""If the input MAGs are simulated MAGs. False by default.
-        This option is valuable when you have prior knowledge of core and contaminated contigs in simulated MAGs or prefer to personally assess the results. 
-        When it sets to True, we will exclude contaminated contigs and retain core contigs using varying cosine similarity thresholds for each MAG. 
-        Multiple sets of results will be generated in different folders within the '/temp_output_folder/FilterOutput/' directory. 
-        You should independently evaluate these different results and select the MAGs that exhibit the best performance.
-        """)
+        "--model_weight_path",
+        default=None,
+        type=str,
+        help="The path of model weight. (In database folder) Defaults to None.")
+    clean_parser.add_argument(
+        "--taxo_vocab_path",
+        default=None,
+        type=str,
+        help="The path of taxon vocabulary. (In database folder) Defaults to None.",
+    )
+    clean_parser.add_argument(
+        "--taxo_tree_path",
+        default=None,
+        type=str,
+        help="The path of taxonomic tree. (In database folder) Defaults to None.",
+    )
 
+    ######################
     #### build parser ####
-    bulid_parser = subparsers.add_parser(
-        "build", help="(Do not use this command at present.) Build the files like taxonomy tree and the taxonomy vocabulary for training.")
+    ######################
+
+    re_bin_parser = subparsers.add_parser("re-bin", help="The **Re-Bin** mode. Binning the contigs and cleaning the MAGs with applying the re-binning strategy." +
+                                          " This mode can ensemble (or apply single binner) the binning results from different binners. Make sure there is no space in the contigs' names.")
     # Add parameter
-    bulid_parser.add_argument(
-        "-i",
-        "--input_taxo_lineage_weight_file_path",
+    re_bin_parser.add_argument(
+        "-c",
+        "--contigs path",
         required=True,
-        type=str,
-        help="The path of the taxonomic lineages weights file. This file has two columns. " +
-        "This first column is the taxonomic lineage of one species from phylum to species level, split with @ charactor. \n" +
-        "The second colums is the weight value of the species." +
-        "The two columns are split with '\\t'.")
-    bulid_parser.add_argument(
-        "-ot",
-        "--output_tree_path",
-        type=str,
+        help="The contigs fasta path.")
+    re_bin_parser.add_argument(
+        "-s",
+        "--sorted_bam_path",
         required=True,
-        help="The output path of the taxonomy tree that build from your taxonomic lineages weights file.")
-    bulid_parser.add_argument(
-        "-ov",
-        "--output_vocabulary_path",
-        type=str,
+        help="The sorted bam path.")
+    re_bin_parser.add_argument(
+        "-o",
+        "--output_path",
         required=True,
-        help="the output path of the taxonomy vocabulary that build from your taxonomic lineages weights file.")
+        help="The folder used to output cleaned MAGs.")
+
+    ### optional ###
+    re_bin_parser.add_argument(
+        "--binning_mode",
+        default=None,
+        help="The semibin2, concoct, metabat2 will all be run if this parameter is None." +
+        " The other modes are: 'semibin2', 'concoct', and 'metabat2'. Defaults to None.",
+        type=str)
+    re_bin_parser.add_argument(
+        "--gpu_num",
+        default=1,
+        help="""The number of GPUs to be used can be specified. Defaults to 1.
+        If you set it to 0, the code will utilize the CPU. 
+        However, please note that using the CPU can result in significantly slower processing speed. 
+        It is recommended to provide at least one GPU (>= GTX-1060-6GB) for accelerating the speed.""",
+        type=int
+    )
+    re_bin_parser.add_argument(
+        "--batch_size_per_gpu",
+        default=4,
+        help="""The batch size per GPU determines the number of sequences that will be loaded onto each GPU. 
+        This parameter is only applicable if the --gpu_num option is set to a value greater than 0. 
+        The default value is 4, meaning that one sequences will be loaded per GPU batch.
+        The batch size for CPU is 4.
+        """,
+        type=int)
+    re_bin_parser.add_argument(
+        "--each_gpu_threads",
+        default=1,
+        type=int,
+        help="""The number of threads per GPU (or CPU) determines the parallelism level during contigs' inference stage. 
+        If the value of --gpu_num is greater than 0, each GPU will have a set number of threads to do inference. 
+        Similarly, if --gpu_num is set to 0 and the code will run on CPU, the specified number of threads will be used. 
+        By default, the number of threads per GPU or CPU is set to 1. 
+        The --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per thread.
+        """
+    )
+    re_bin_parser.add_argument(
+        "--overlapping_ratio",
+        default=0.5,
+        type=float,
+        help="""The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. 
+        By default, the overlapping ratio is set to 0.5. 
+        This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping subsequences with 0.5 overlap 
+        between consecutive subsequences.
+        """
+    )
+    re_bin_parser.add_argument(
+        "--cut_seq_length",
+        default=8192,
+        type=int,
+        help="""The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. 
+        The default setting is 8192, which is also the maximum length allowed during training. 
+        If a contig's length surpasses this threshold, it will be divided into smaller subsequences with lengths equal to or less 
+        than the cut_seq_length.
+        """)
+    re_bin_parser.add_argument(
+        "--mag_length_threshold",
+        default=200000,
+        type=int,
+        help="""The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs). 
+        The default threshold is set to 200,000, which represents the total length of the contigs in base pairs (bp). 
+        MAGs with a total contig length equal to or greater than this threshold will be considered for further analysis or inclusion, 
+        while MAGs with a total contig length below the threshold may be filtered out.
+        """,
+    )
+    re_bin_parser.add_argument(
+        "--num_process",
+        default=None,
+        type=int,
+        help="The maximum number of threads will be used. All CPUs will be used if it is None. Defaults to None")
+    re_bin_parser.add_argument(
+        "--topk_or_greedy_search",
+        default="topk",
+        choices=["topk", "greedy"],
+        type=str,
+        help="""Topk searching or greedy searching to label a contig. Defaults to "topk".
+        """
+    )
+    re_bin_parser.add_argument(
+        "--topK_num",
+        default=3,
+        type=int,
+        help="""During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the 
+        highest cosine similarity with the contig's encoded vector. By default, the value of k is set to 3, meaning that the three most similar 
+        nodes in terms of cosine similarity will be considered for labeling the contig. 
+        Please note that this parameter does not have any effect when using the greedy search approach (topK_num=1). Defaults to 3.
+        """)
+    re_bin_parser.add_argument(
+        "--temp_output_folder",
+        default=None,
+        type=str,
+        help="""
+        The temporary files generated during the process can be stored in a specified folder path. 
+        By default, if no path is provided (i.e., set to None), the temporary files will be stored in the parent folder of the '--input_path' location. 
+        However, you have the option to specify a different folder path to store these temporary files if needed.
+        """,
+    )
+    re_bin_parser.add_argument(
+        "--db_folder_path",
+        default=None,
+        help="""
+        The path of database folder.
+        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to 
+        point to the appropriate folder. 
+        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
+        """,
+        type=str
+    )
+    re_bin_parser.add_argument(
+        "--model_weight_path",
+        default=None,
+        type=str,
+        help="The path of model weight. (In database folder) Defaults to None.")
+    re_bin_parser.add_argument(
+        "--taxo_vocab_path",
+        default=None,
+        type=str,
+        help="The path of taxon vocabulary. (In database folder) Defaults to None.",
+    )
+    re_bin_parser.add_argument(
+        "--taxo_tree_path",
+        default=None,
+        type=str,
+        help="The path of taxonomic tree. (In database folder) Defaults to None.",
+    )
 
     ### main part ###
     args = myparser.parse_args()
-
     if args.command == "clean":
+        s_ratio = 1. / float(args.gpu_num)
+        gpu_work_ratio = [s_ratio for _ in range(int(args.gpu_num) - 1)]
+        gpu_work_ratio.append(1. - sum(gpu_work_ratio))
         cleanMAGs(
-            args.input_path,
-            args.output_path,
-            args.bin_suffix,
-            args.gpu_num,
-            args.batch_size_per_gpu,
-            args.num_threads_per_device,
-            0.5,
-            8192,
-            args.num_threads_call_genes,
-            0.6,
-            0.4,
-            0.55,
-            550000,
-            args.checkM_process_num,
-            args.num_threads_per_checkm,
-            "topk",
-            3,
-            args.temp_output_folder,
-            args.output_bins_meta_info_path,
-            args.info_files_path,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            args.simulated_MAG
+            output_bin_folder_path=args.output_path,
+            gpu_work_ratio=gpu_work_ratio,
+            batch_size_per_gpu=args.batch_size_per_gpu,
+            each_gpu_threads=args.each_gpu_threads,
+            input_bins_folder=args.input_path,
+            bin_suffix=args.bin_suffix,
+            contig_fasta_path=None,
+            sorted_bam_file=None,
+            binning_mode=None,
+            overlapping_ratio=args.overlapping_ratio,
+            cut_seq_length=args.cut_seq_length,
+            seq_length_threshold=args.mag_length_threshold,
+            topk_or_greedy=args.topk_or_greedy_search,
+            topK_num=args.topK_num,
+            num_process=args.num_process,
+            temp_output_folder=args.temp_output_folder,
+            db_files_path=args.db_folder_path,
+            model_weight_path=args.model_weight_path,
+            taxo_tree_path=args.taxo_tree_path,
+            taxo_vocab_path=args.taxo_vocab_path,
         )
-
-    elif args.command == "build":
-        taxo_tree = bulid_tree(args.input_weight_file_path)
-        writePickle(args.output_tree_path, taxo_tree)
-        vocab = build_taxo_vocabulary(args.input_weight_file_path)
-        with open(args.output_vocabulary_path, "w") as wh:
-            for word, index in vocab.items():
-                wh.write(word+"\t"+str(index) + "\n")
+    elif args.command == "re-bin":
+        s_ratio = 1. / float(args.gpu_num)
+        gpu_work_ratio = [s_ratio for _ in range(int(args.gpu_num) - 1)]
+        gpu_work_ratio.append(1. - sum(gpu_work_ratio))
+        cleanMAGs(
+            output_bin_folder_path=args.output_path,
+            gpu_work_ratio=gpu_work_ratio,
+            batch_size_per_gpu=args.batch_size_per_gpu,
+            each_gpu_threads=args.each_gpu_threads,
+            input_bins_folder=None,
+            bin_suffix=None,
+            contig_fasta_path=args.contigs_path,
+            sorted_bam_file=args.sorted_bam_path,
+            binning_mode=args.binning_mode,
+            overlapping_ratio=args.overlapping_ratio,
+            cut_seq_length=args.cut_seq_length,
+            seq_length_threshold=args.mag_length_threshold,
+            topk_or_greedy=args.topk_or_greedy_search,
+            topK_num=args.topK_num,
+            num_process=args.num_process,
+            temp_output_folder=args.temp_output_folder,
+            db_files_path=args.db_folder_path,
+            model_weight_path=args.model_weight_path,
+            taxo_tree_path=args.taxo_tree_path,
+            taxo_vocab_path=args.taxo_vocab_path,
+        )
     else:
         print("#################################")
         print("### RUN THE DEEPURIFY PROJECT ###")
         print("#################################")
         print()
-        print("Please use 'deepurify -h' or 'deepurify clean -h' for helping.")
+        print("Please use 'deepurify -h' for helping.")
+
+# if __name__ == "__main__":
+#     main()
