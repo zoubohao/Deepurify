@@ -41,21 +41,22 @@ conda activate deepurify
 pip install Deepurify==2.3.2
 ```
 
-## Download Files and Set Environment Variable for Running
-- Download the database (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1FXpxoXFYHcX9QAFe7U6zfM8YjalxNLFk/view?usp=sharing)**.
+## Download Files for Running
+Download the model weight and other files (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1FXpxoXFYHcX9QAFe7U6zfM8YjalxNLFk/view?usp=sharing)**.
 
-**1.** Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environmental variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
+#### 1. Set Environmental Variable
+- Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environmental variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
 ```
 export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
 
-**2.** Save the .bashrc file, and then execute:
+- Save the .bashrc file, and then execute:
 ```
 source .bashrc
 ```
 
-#### **OR**
+#### 2. Using the '--db_folder_path' flag in CLI
 
 - **You can set the '--db_folder_path' in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
