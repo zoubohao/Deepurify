@@ -30,6 +30,6 @@ if __name__ == "__main__":
             contig_fasta_path=cur_input_contigs,
             sorted_bam_file=cur_bam,
             gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125],
-            num_process=64,
+            num_process=256,
             db_files_path="./GTDB_Taxa_Info/"
         )
