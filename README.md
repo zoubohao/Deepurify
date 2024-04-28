@@ -35,7 +35,7 @@ conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=
 ```
 
 #### 2. SECOND STEP (Install Codes of Deepurify)
-After preparing the env, the code of Deepurify can be installed via pip simply. 
+After prepared the environment, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
 pip install Deepurify==2.3.2
