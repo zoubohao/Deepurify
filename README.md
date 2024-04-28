@@ -80,7 +80,7 @@ if __name__ == "__main__":
         input_bins_folder=input_folder,
         bin_suffix=bin_suffix,
         gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125], # enable 8 GPUs with equal work ratios.
-        db_files_path="./GTDB_Taxa_Info/"
+        db_files_path="./Deepurify-DB/"
     )
 
 ```
