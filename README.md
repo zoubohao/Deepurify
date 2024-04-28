@@ -61,7 +61,7 @@ source .bashrc
 
 #### **OR**
 
-- **You can set the '--db_folder_path' in CLI to the path of 'Deepurify-DB' folder if you do not want to set the environmental variable.**
+- **You can set the '--db_folder_path' in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
 
 ## Running Deepurify
@@ -87,6 +87,9 @@ if __name__ == "__main__":
 
 
 **2.  You can run the Deepurify with 're-bin' mode through the **cleanMAGs** function.**
+
+<div align=center> <img src="/re-bin.png" alt="re-bin mode"></div>
+
 ```
 from Deepurify.clean_func import cleanMAGs
 
