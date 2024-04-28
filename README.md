@@ -49,6 +49,7 @@ pip install Deepurify==2.3.2
 export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
+
 **2.** Save the .bashrc file, and then execute:
 ```
 source .bashrc
