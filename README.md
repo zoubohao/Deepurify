@@ -20,7 +20,7 @@ Please independently install the following tools and ensure their proper functio
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
 
-## Installation (Have Verified):
+## Installation (<font color=green>Have Verified</font>):
 #### 1. FIRST STEP (Create Conda Environment for Deepurify)
 Create deepurify's conda environment by using this command:
 ```
