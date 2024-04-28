@@ -262,7 +262,7 @@ This file contains the following columns:
 - RAM: >= 32 GB
 - GPU: The GPU memory must be equal to or greater than 6GB. (5273MB)
 
-This system can run the configuration in the **"Running Deepurify"** section.
+This system can run the configuration in the running commands in **"Running Deepurify"** section.
 
 
 ## Our System Config
