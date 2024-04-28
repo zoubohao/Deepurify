@@ -47,7 +47,7 @@ Download the model weight and other files (**Deepurify-DB.zip**) for running Dee
 #### 1. Set Environmental Variable
 - Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environmental variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
 ```
-export DeepurifyInfoFiles=/path/of/this/unzip/folder/
+export DeepurifyInfoFiles=/path/of/this/Deepurify-DB/
 ```
 For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
 
@@ -113,7 +113,7 @@ Please refer to the documentation of this function for more details.
 
 **3.  You can run Deepurify with 'clean' mode through the following command:**
 ```
-deepurify clean  -i ./input_folder/ -o ./output_folder/ --bin_suffix fasta --gpu_num 1 --each_gpu_threads 1
+deepurify clean  -i ./input_folder/ -o ./output_folder/ --bin_suffix fasta --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
 ```
 ----------------------------------------------------------------------------------------------------------------------------------------
 ```
@@ -179,7 +179,7 @@ Please run 'deepurify clean -h' for more details.
 
 **4.  You can run Deepurify with 're-bin' mode through the following command:**
 ```
-deepurify re-bin  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1
+deepurify re-bin  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
 ```
 ----------------------------------------------------------------------------------------------------------------------------------------
 ```
