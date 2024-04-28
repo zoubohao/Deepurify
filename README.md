@@ -164,8 +164,8 @@ optional arguments:
                         files will be stored in the parent folder of the '--input_path' location. However, you have the option to specify a different folder path to store these temporary
                         files if needed.
   --db_folder_path DB_FOLDER_PATH
-                        The path of the database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
-                        to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
+                        The path of the database folder. Defaults to None. It is expected that the environmental variable 'DeepurifyInfoFiles' has been set
+                        to point to the appropriate folder if no path is provided (i.e., set to None). Please ensure the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
                         provided.
   --model_weight_path MODEL_WEIGHT_PATH
                         The path of model weight. (In database folder) Defaults to None.
@@ -232,8 +232,8 @@ optional arguments:
                         files will be stored in the parent folder of the '--input_path' location. However, you have the option to specify a different folder path to store these temporary
                         files if needed.
   --db_folder_path DB_FOLDER_PATH
-                        The path of the database folder. By default, if no path is provided (i.e., set to None), it is expected that the environmental variable 'DeepurifyInfoFiles' has been set
-                        to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
+                        The path of the database folder. Defaults to None. It is expected that the environmental variable 'DeepurifyInfoFiles' has been set
+                        to point to the appropriate folder if no path is provided (i.e., set to None). Please ensure the 'DeepurifyInfoFiles' environmental variable is correctly configured if the path is not explicitly
                         provided.
   --model_weight_path MODEL_WEIGHT_PATH
                         The path of model weight. (In database folder) Defaults to None.
