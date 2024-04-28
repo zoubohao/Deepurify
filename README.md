@@ -66,6 +66,9 @@ source .bashrc
 
 ## Running Deepurify
 **1.  You can run Deepurify with 'clean' mode through the **cleanMAGs** function.**
+
+<div align=center> <img src="/clean_s.png" alt="re-bin mode"></div>
+
 ```
 from Deepurify.clean_func import cleanMAGs
 
