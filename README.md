@@ -5,7 +5,7 @@ Deepurify elevates metagenome-assembled genomes' (MAGs) quality by utilizing a m
 
 <div align=center> <img src="/deeplogo.png" alt="logo"></div>
 
-## Dependencies:
+## Dependencies (All of the dependencies can be installed via conda with the commands in the INSTALLATION section):
 
 Please independently install the following tools and ensure their proper functionality.
 
@@ -20,15 +20,13 @@ Please independently install the following tools and ensure their proper functio
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
 
-## Installation:
+## Installation (Have verified):
 #### FIRST STEP (Create Conda Environment)
 Create deepurify's conda environment by using this command:
-
 ```
 conda env create -n deepurify -f deepurify-conda-env.yml
 ```
-
-Do not forget to download the database files for **CheckM2 !!!** and set environmental variable CHECKM2DB using: ```export CHECKM2DB="path/to/database/uniref100.KO.1.dmnd"```
+Do not forget to download the database files for **CheckM2 !!!** and set environmental variable CHECKM2DB using: ```export CHECKM2DB="/path/to/database/uniref100.KO.1.dmnd"```. 
 
 and Please download PyTorch v2.1.0 -cu121 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
 ```
@@ -37,24 +35,21 @@ conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=
 ```
 
 #### SECOND STEP (Install Codes)
-After preparing the env, the code of Deepurify can be installed via pip. 
-
+After preparing the env, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
 pip install Deepurify==2.3.2
 ```
 
-
 ## Download Files and Set Environment Variable for Running
 - Download the database (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1FXpxoXFYHcX9QAFe7U6zfM8YjalxNLFk/view?usp=sharing)**.
 
-1. Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environmental variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
+**1.** Unzip the downloaded file (**Deepurify-DB.zip**) and set an **environmental variable** called "DeepurifyInfoFiles" by adding the following line to the last line of .bashrc file (The path of the file: ~/.bashrc):
 ```
 export DeepurifyInfoFiles=/path/of/this/unzip/folder/
 ```
 For example: 'export DeepurifyInfoFiles=/home/csbhzou/software/Deepurify-DB/'.
-
-2. Save the .bashrc file, and then execute:
+**2.** Save the .bashrc file, and then execute:
 ```
 source .bashrc
 ```
