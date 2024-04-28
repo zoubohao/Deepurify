@@ -21,7 +21,7 @@ Please independently install the following tools and ensure their proper functio
 
 
 ## Installation (Have verified):
-#### FIRST STEP (Create Conda Environment)
+#### 1. FIRST STEP (Create Conda Environment)
 Create deepurify's conda environment by using this command:
 ```
 conda env create -n deepurify -f deepurify-conda-env.yml
@@ -34,7 +34,7 @@ conda activate deepurify
 conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
 ```
 
-#### SECOND STEP (Install Codes)
+#### 2. SECOND STEP (Install Codes)
 After preparing the env, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
