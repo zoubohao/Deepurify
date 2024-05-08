@@ -16,6 +16,7 @@ Please independently install the following tools and ensure their proper functio
 5. **[CONCOCT](https://github.com/BinPro/CONCOCT)** v1.1.0 (Binner)
 6. **[MetaBAT2](https://bitbucket.org/berkeleylab/metabat/src/master/)** v2.15 (Binner)
 7. **[Semibin2](https://github.com/BigDataBiology/SemiBin)** v2.1.0 (Binner)
+8. **[PyTorch](https://pytorch.org/)** v2.1.0
 
 **Note**: Ensure that all the listed dependencies above are installed and functioning without any errors.
 
