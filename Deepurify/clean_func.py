@@ -105,8 +105,6 @@ def cleanMAGs(
     print("###  WELCOME TO USE DEEPURIFY  ###")
     print("##################################")
     print()
-    print("Deepurify version: 2.3.0")
-    print()
     assert batch_size_per_gpu <= 64, "batch_size_per_gpu must smaller or equal with 64."
     assert each_gpu_threads <= 4, "each_gpu_threads must smaller or equal with 4."
     

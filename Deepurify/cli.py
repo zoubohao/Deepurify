@@ -334,9 +334,13 @@ def main():
     ### main part ###
     args = myparser.parse_args()
     if args.command == "clean":
-        s_ratio = 1. / float(args.gpu_num)
-        gpu_work_ratio = [s_ratio for _ in range(int(args.gpu_num) - 1)]
-        gpu_work_ratio.append(1. - sum(gpu_work_ratio))
+        gpu_num_int = int(args.gpu_num)
+        if gpu_num_int == 0:
+            gpu_work_ratio = []
+        else:
+            s_ratio = 1. / float(args.gpu_num)
+            gpu_work_ratio = [s_ratio for _ in range(int(args.gpu_num) - 1)]
+            gpu_work_ratio.append(1. - sum(gpu_work_ratio))
         cleanMAGs(
             output_bin_folder_path=args.output_path,
             gpu_work_ratio=gpu_work_ratio,
@@ -360,9 +364,13 @@ def main():
             taxo_vocab_path=args.taxo_vocab_path,
         )
     elif args.command == "re-bin":
-        s_ratio = 1. / float(args.gpu_num)
-        gpu_work_ratio = [s_ratio for _ in range(int(args.gpu_num) - 1)]
-        gpu_work_ratio.append(1. - sum(gpu_work_ratio))
+        gpu_num_int = int(args.gpu_num)
+        if gpu_num_int == 0:
+            gpu_work_ratio = []
+        else:
+            s_ratio = 1. / float(args.gpu_num)
+            gpu_work_ratio = [s_ratio for _ in range(int(args.gpu_num) - 1)]
+            gpu_work_ratio.append(1. - sum(gpu_work_ratio))
         cleanMAGs(
             output_bin_folder_path=args.output_path,
             gpu_work_ratio=gpu_work_ratio,
@@ -390,6 +398,7 @@ def main():
         print("### RUN THE DEEPURIFY PROJECT ###")
         print("#################################")
         print()
+        print("Deepurify version: 2.3.3")
         print("Please use 'deepurify -h' for helping.")
 
 # if __name__ == "__main__":
