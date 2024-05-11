@@ -62,57 +62,13 @@ source .bashrc
 - **You can set the '--db_folder_path' in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
 
-## Running Deepurify
-**1.  You can run Deepurify with 'clean' mode through the **cleanMAGs** function.**
+## Running Deepurify with `Clean' Mode
+
+
+**1.  You can run Deepurify with 'clean' mode through the following command:**
 
 <div align=center> <img src="/clean.png" alt="clean mode"></div>
 
-```
-from Deepurify.clean_func import cleanMAGs
-
-if __name__ == "__main__":
-    input_folder = "./input_folder/"
-    bin_suffix = "fasta"
-    output_folder = "./output_folder/"
-    cleanMAGs(
-        output_bin_folder_path=output_folder,
-        batch_size_per_gpu=4,
-        each_gpu_threads=1,
-        input_bins_folder=input_folder,
-        bin_suffix=bin_suffix,
-        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125], # enable 8 GPUs with equal work ratios.
-        db_files_path="./Deepurify-DB/"
-    )
-
-```
-
-
-**2.  You can run the Deepurify with 're-bin' mode through the **cleanMAGs** function.**
-
-<div align=center> <img src="/re-bin.png" alt="re-bin mode"></div>
-
-```
-from Deepurify.clean_func import cleanMAGs
-
-if __name__ == "__main__":
-    contig_fasta_path = "./contigs.fasta"
-    bam_file_path = "./sorted.bam"
-    output_folder = "./output_folder/"
-    cleanMAGs(
-        output_bin_folder_path=output_folder,
-        batch_size_per_gpu=4,
-        each_gpu_threads=1,
-        contig_fasta_path=contig_fasta_path,
-        sorted_bam_file=bam_file_path,
-        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 8 GPUs with equal work ratios.
-        db_files_path="./Deepurify-DB/"
-    )
-
-```
-Please refer to the documentation of this function for more details.
-
-
-**3.  You can run Deepurify with 'clean' mode through the following command:**
 ```
 deepurify clean  -i ./input_folder/ -o ./output_folder/ --bin_suffix fasta --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
 ```
@@ -178,7 +134,33 @@ optional arguments:
 Please run 'deepurify clean -h' for more details.
 
 
-**4.  You can run Deepurify with 're-bin' mode through the following command:**
+**2.  You can run Deepurify with 'clean' mode through the **cleanMAGs** function in Python.**
+
+```
+from Deepurify.clean_func import cleanMAGs
+
+if __name__ == "__main__":
+    input_folder = "./input_folder/"
+    bin_suffix = "fasta"
+    output_folder = "./output_folder/"
+    cleanMAGs(
+        output_bin_folder_path=output_folder,
+        batch_size_per_gpu=4,
+        each_gpu_threads=1,
+        input_bins_folder=input_folder,
+        bin_suffix=bin_suffix,
+        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125], # enable 8 GPUs with equal work ratios.
+        db_files_path="./Deepurify-DB/"
+    )
+
+```
+
+## Running Deepurify with `re-bin' Mode
+
+**1.  You can run Deepurify with 're-bin' mode through the following command:**
+
+<div align=center> <img src="/re-bin.png" alt="re-bin mode"></div>
+
 ```
 deepurify re-bin  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
 ```
@@ -244,6 +226,29 @@ optional arguments:
                         The path of taxonomic tree. (In database folder) Defaults to None.
 ```
 Please run 'deepurify re-bin -h' for more details.
+
+
+**2.  You can run the Deepurify with 're-bin' mode through the **cleanMAGs** function in Python.**
+
+```
+from Deepurify.clean_func import cleanMAGs
+
+if __name__ == "__main__":
+    contig_fasta_path = "./contigs.fasta"
+    bam_file_path = "./sorted.bam"
+    output_folder = "./output_folder/"
+    cleanMAGs(
+        output_bin_folder_path=output_folder,
+        batch_size_per_gpu=4,
+        each_gpu_threads=1,
+        contig_fasta_path=contig_fasta_path,
+        sorted_bam_file=bam_file_path,
+        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 8 GPUs with equal work ratios.
+        db_files_path="./Deepurify-DB/"
+    )
+
+```
+Please refer to the documentation of this function for more details.
 
 
 ## Files in the output directory
