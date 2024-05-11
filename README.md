@@ -62,7 +62,7 @@ source .bashrc
 - **You can set the '--db_folder_path' in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
 
-## Running Deepurify with `Clean' Mode
+## Running Deepurify with 'clean' Mode
 
 
 **1.  You can run Deepurify with 'clean' mode through the following command:**
@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
 ```
 
-## Running Deepurify with `re-bin' Mode
+## Running Deepurify with 're-bin' Mode
 
 **1.  You can run Deepurify with 're-bin' mode through the following command:**
 
