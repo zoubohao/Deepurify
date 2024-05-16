@@ -191,7 +191,7 @@ def main():
     # Add parameter
     re_bin_parser.add_argument(
         "-c",
-        "--contigs path",
+        "--contigs_path",
         required=True,
         help="The contigs fasta path.")
     re_bin_parser.add_argument(
@@ -398,7 +398,7 @@ def main():
         print("### RUN THE DEEPURIFY PROJECT ###")
         print("#################################")
         print()
-        print("Deepurify version: 2.3.3")
+        print("Deepurify version: 2.3.4")
         print("Please use 'deepurify -h' for helping.")
 
 # if __name__ == "__main__":

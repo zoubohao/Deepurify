@@ -6,7 +6,7 @@ requires_list = [i.strip() for i in requires_list]
 
 setup(
     name=name,
-    version='2.3.3',
+    version='2.3.4',
     author="Bohao Zou",
     author_email='csbhzou@comp.hkbu.edu.hk',
     description="The purification tool for improving the quality of MAGs.",
