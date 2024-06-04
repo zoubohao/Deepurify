@@ -36,10 +36,10 @@ conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=
 ```
 
 #### 2. SECOND STEP (Install Codes of Deepurify)
-After prepared the environment, the code of Deepurify can be installed via pip simply. 
+After preparing the environment, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
-pip install Deepurify==2.3.4
+pip install Deepurify==2.3.5
 ```
 
 ## Download Files for Running
@@ -155,14 +155,14 @@ if __name__ == "__main__":
 
 ```
 
-## Running Deepurify with 're-bin' Mode
+## Running Deepurify with 'iter-clean' Mode
 
-**1.  You can run Deepurify with 're-bin' mode through the following command:**
+**1.  You can run Deepurify with 'iter-clean' mode through the following command:**
 
 <div align=center> <img src="/re-bin.png" alt="re-bin mode"></div>
 
 ```
-deepurify re-bin  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
+deepurify iter-clean  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
 ```
 ----------------------------------------------------------------------------------------------------------------------------------------
 ```
@@ -228,7 +228,7 @@ optional arguments:
 Please run 'deepurify re-bin -h' for more details.
 
 
-**2.  You can run the Deepurify with 're-bin' mode through the **cleanMAGs** function in Python.**
+**2.  You can run the Deepurify with 'iter-clean' mode through the **cleanMAGs** function in Python.**
 
 ```
 from Deepurify.clean_func import cleanMAGs
