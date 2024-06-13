@@ -93,6 +93,7 @@ dependencies:
   - semibin=2.1.0=pyhdfd78af_0
   - drep=3.5.0=pyhdfd78af_0
   - checkm2=1.0.1=pyh7cba7a3_0
+  - skani=0.2.1=h4ac6f70_0
   - pip:
       - func_timeout==4.3.5
       - psutil==5.9.8

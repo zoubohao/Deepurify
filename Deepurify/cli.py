@@ -186,7 +186,7 @@ def main():
     #### build parser ####
     ######################
 
-    re_bin_parser = subparsers.add_parser("re-bin", help="The **Re-Bin** mode. Binning the contigs and cleaning the MAGs with applying the re-binning strategy." +
+    re_bin_parser = subparsers.add_parser("iter-clean", help="The **iter-clean** mode. Binning the contigs and cleaning the MAGs with applying the iter-clean strategy." +
                                           " This mode can ensemble (or apply single binner) the binning results from different binners. Make sure there is no space in the contigs' names.")
     # Add parameter
     re_bin_parser.add_argument(
@@ -363,7 +363,7 @@ def main():
             taxo_tree_path=args.taxo_tree_path,
             taxo_vocab_path=args.taxo_vocab_path,
         )
-    elif args.command == "re-bin":
+    elif args.command == "iter-clean":
         gpu_num_int = int(args.gpu_num)
         if gpu_num_int == 0:
             gpu_work_ratio = []
@@ -398,7 +398,7 @@ def main():
         print("### RUN THE DEEPURIFY PROJECT ###")
         print("#################################")
         print()
-        print("Deepurify version: 2.3.4")
+        print("Deepurify version: 2.3.6")
         print("Please use 'deepurify -h' for helping.")
 
 # if __name__ == "__main__":

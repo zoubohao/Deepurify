@@ -334,9 +334,8 @@ def runCheckm2Reuse(filterFolder: str, bin_suffix: str):
 def runDeRep(drep_out_folder,
             genomes_input_folder,
             cpu_num):
-    # much more faster with --SkipSecondary and with the almost same result.
     res = subprocess.Popen(
-        f"dRep compare {drep_out_folder} -g {os.path.join(genomes_input_folder, '*.fasta')} --processors {cpu_num} -pa 0.95 --SkipSecondary", 
+        f"dRep compare {drep_out_folder} -g {os.path.join(genomes_input_folder, '*.fasta')} --S_algorithm skani --processors {cpu_num}", 
         shell= True
     )
     res.wait()

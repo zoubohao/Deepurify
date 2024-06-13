@@ -228,8 +228,8 @@ def process_drep_result(
     csv_info = readCSV(drep_Cdb_csv_path)[1:]
     wh = open(os.path.join(output_folder, "MetaInfo.tsv"), "w")
     for info in csv_info:
-        c = info[0]
-        n = info[1]
+        c = info[1]
+        n = info[0]
         q = meta_info[n]
         if c not in collect:
             collect[c] = [(n, q, getScore(q))]
