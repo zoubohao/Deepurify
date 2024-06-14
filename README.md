@@ -243,7 +243,7 @@ if __name__ == "__main__":
         each_gpu_threads=1,
         contig_fasta_path=contig_fasta_path,
         sorted_bam_file=bam_file_path,
-        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 8 GPUs with equal work ratios.
+        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 7 GPUs with different work ratios.
         db_files_path="./Deepurify-DB/"
     )
 
