@@ -283,11 +283,11 @@ cleanMAGs(
     output_bin_folder_path=cur_output_folder,
     batch_size_per_gpu=48,
     each_gpu_threads=4,
-    # setting of contig inference stage
+    # the setting of contig inference stage
     contig_fasta_path=cur_input_contigs,
     sorted_bam_file=cur_bam,
     gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125],
     num_process=256,
-    db_files_path="./GTDB_Taxa_Info/"
+    db_files_path="./Deepurify-DB/"
 )
 ```
