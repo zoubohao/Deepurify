@@ -42,7 +42,7 @@ conda activate deepurify
 pip install Deepurify==2.3.5
 ```
 
-## Download Files for Running
+## Download Model Weight and Other Files for Running
 Download the model weight and other files (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1FXpxoXFYHcX9QAFe7U6zfM8YjalxNLFk/view?usp=sharing)**.
 
 #### 1. Set Environmental Variable
