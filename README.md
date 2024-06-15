@@ -9,8 +9,8 @@ Deepurify elevates metagenome-assembled genomes' (MAGs) quality by utilizing a m
 
 Please independently install the following tools and ensure their proper functionality.
 
-1. **[prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
-2. **[hmmer](http://hmmer.org/download.html)** v.3.3.2 (Detecting conserved single-copy marker genes)
+1. **[Prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
+2. **[HMMER](http://hmmer.org/download.html)** v.3.3.2 (Detecting conserved single-copy marker genes)
 3. **[CheckM2](https://github.com/chklovski/CheckM2)** v 1.0.1 (Evaluate the quality of MAGs)
 4. **[dRep](https://github.com/MrOlm/drep)** v3.5.0 (Filter replicated MAGs)
 5. **[CONCOCT](https://github.com/BinPro/CONCOCT)** v1.1.0 (Binner)
