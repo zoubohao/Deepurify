@@ -59,7 +59,7 @@ source .bashrc
 
 #### 2. Using the '--db_folder_path' flag in CLI
 
-- **You can set the '--db_folder_path' in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
+- **You can set the '--db_folder_path' flag in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
 
 ## Running Deepurify with 'clean' Mode
