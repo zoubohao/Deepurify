@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
 **1.  You can run Deepurify with 'iter-clean' mode through the following command:**
 
-<div align=center> <img src="/re-bin.png" alt="re-bin mode"></div>
+<div align=center> <img src="/iter-clean.png" alt="re-bin mode"></div>
 
 ```
 deepurify iter-clean  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
