@@ -9,8 +9,8 @@ Deepurify elevates metagenome-assembled genomes' (MAGs) quality by utilizing a m
 
 Please independently install the following tools and ensure their proper functionality.
 
-1. **[prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
-2. **[hmmer](http://hmmer.org/download.html)** v.3.3.2 (Detecting conserved single-copy marker genes)
+1. **[Prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
+2. **[HMMER](http://hmmer.org/download.html)** v.3.3.2 (Detecting conserved single-copy marker genes)
 3. **[CheckM2](https://github.com/chklovski/CheckM2)** v 1.0.1 (Evaluate the quality of MAGs)
 4. **[dRep](https://github.com/MrOlm/drep)** v3.5.0 (Filter replicated MAGs)
 5. **[CONCOCT](https://github.com/BinPro/CONCOCT)** v1.1.0 (Binner)
@@ -42,7 +42,7 @@ conda activate deepurify
 pip install Deepurify==2.3.5
 ```
 
-## Download Files for Running
+## Download Model Weight and Other Files for Running
 Download the model weight and other files (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1FXpxoXFYHcX9QAFe7U6zfM8YjalxNLFk/view?usp=sharing)**.
 
 #### 1. Set Environmental Variable
@@ -59,7 +59,7 @@ source .bashrc
 
 #### 2. Using the '--db_folder_path' flag in CLI
 
-- **You can set the '--db_folder_path' in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
+- **You can set the '--db_folder_path' flag in CLI to the path of the 'Deepurify-DB' folder if you do not want to set the environmental variable.**
 
 
 ## Running Deepurify with 'clean' Mode
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
 **1.  You can run Deepurify with 'iter-clean' mode through the following command:**
 
-<div align=center> <img src="/re-bin.png" alt="re-bin mode"></div>
+<div align=center> <img src="/iter-clean.png" alt="re-bin mode"></div>
 
 ```
 deepurify iter-clean  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam --gpu_num 1 --each_gpu_threads 1 --db_folder_path /path/of/this/Deepurify-DB/
@@ -243,7 +243,7 @@ if __name__ == "__main__":
         each_gpu_threads=1,
         contig_fasta_path=contig_fasta_path,
         sorted_bam_file=bam_file_path,
-        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 8 GPUs with equal work ratios.
+        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 7 GPUs with different work ratios.
         db_files_path="./Deepurify-DB/"
     )
 
@@ -283,11 +283,11 @@ cleanMAGs(
     output_bin_folder_path=cur_output_folder,
     batch_size_per_gpu=48,
     each_gpu_threads=4,
-    # setting of contig inference stage
+    # the setting of contig inference stage
     contig_fasta_path=cur_input_contigs,
     sorted_bam_file=cur_bam,
     gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125],
     num_process=256,
-    db_files_path="./GTDB_Taxa_Info/"
+    db_files_path="./Deepurify-DB/"
 )
 ```
