@@ -398,7 +398,7 @@ def main():
         print("### RUN THE DEEPURIFY PROJECT ###")
         print("#################################")
         print()
-        print("Deepurify version: 2.3.6")
+        print("Deepurify version: 2.3.7")
         print("Please use 'deepurify -h' for helping.")
 
 # if __name__ == "__main__":

@@ -82,6 +82,19 @@ def summedRecord(recordList):
     return summedValue
 
 
+def cluster_kmeans(bin_cluster_num, X, cl, length_weights):
+    kmeans_model = None
+    try:
+        kmeans_model = COPKMeans(bin_cluster_num)
+        func_timeout(60 * 3, kmeans_model.fit, args=(X, None, [], cl,))
+    except:
+        ## In theory, it is better to use GMM or Variational Bayesian Gaussian Mixture to cluster if we know the number 
+        ## of components. But we did not do experiments for these two methods.
+        kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
+        kmeans_model.fit(X, None, length_weights)
+    return kmeans_model
+
+
 # original split
 def cluster_split(
     sub_contigName2seq: Dict[str, str],
@@ -167,8 +180,7 @@ def cluster_split(
     
     kmeans_model = None
     try:
-        kmeans_model = COPKMeans(bin_cluster_num)
-        func_timeout(60 * 3, kmeans_model.fit, args=(X, None, [], cl,))
+        kmeans_model = cluster_kmeans(bin_cluster_num, X, cl, length_weights)
     except:
         ## In theory, it is better to use GMM or Variational Bayesian Gaussian Mixture to cluster if we know the number 
         ## of components. But we did not do experiments for these two methods.
