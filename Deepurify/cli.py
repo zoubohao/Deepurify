@@ -9,7 +9,7 @@ from typing import Dict, List
 from Deepurify.clean_func import cleanMAGs
 from Deepurify.Utils.DataUtils import insert
 
-deepurify_v = "v2.3.9"
+deepurify_v = "v2.3.10"
 
 def bulid_tree(weight_file_path: str) -> Dict:
     def split_func(oneLine: str) -> List:

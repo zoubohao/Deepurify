@@ -260,7 +260,7 @@ def buildCheckm2TmpFiles(
     for file in os.listdir(diam_file):
         readDiamond(os.path.join(diam_file, file), diamond_info)
 
-    wdh = open(output_dimond_file, "w")
+    wdh = open(output_dimond_file, "w", encoding="utf-8")
     N = len(modified_bin_names)
     for j, modified_bin_name in enumerate(modified_bin_names):
         bin_name, suffix = os.path.splitext(modified_bin_name)
