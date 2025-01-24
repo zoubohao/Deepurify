@@ -9,6 +9,7 @@ from typing import Dict, List
 from Deepurify.clean_func import cleanMAGs
 from Deepurify.Utils.DataUtils import insert
 
+deepurify_v = "v2.3.9"
 
 def bulid_tree(weight_file_path: str) -> Dict:
     def split_func(oneLine: str) -> List:
@@ -38,6 +39,7 @@ def build_taxo_vocabulary(weight_file_path: str) -> Dict[str, int]:
 
 
 def main():
+    print(f"Deepurify version: *** {deepurify_v} ***")
     myparser = argparse.ArgumentParser(
         prog=os.path.basename(sys.argv[0]), description="Deepurify is a tool to improving the quality of MAGs."
     )
@@ -185,6 +187,7 @@ def main():
     ######################
     #### build parser ####
     ######################
+
     re_bin_parser = subparsers.add_parser("iter-clean", help="The **iter-clean** mode. Binning the contigs and cleaning the MAGs with applying the iter-clean strategy." +
                                           " This mode can ensemble (or apply single binner) the binning results from different binners. Make sure there is no space in the contigs' names.")
     # Add parameter
@@ -397,7 +400,7 @@ def main():
         print("### RUN THE DEEPURIFY PROJECT ###")
         print("#################################")
         print()
-        print("Deepurify version: 2.3.7")
+        print(f"Deepurify version: *** {deepurify_v} ***")
         print("Please use 'deepurify -h' for helping.")
 
 # if __name__ == "__main__":

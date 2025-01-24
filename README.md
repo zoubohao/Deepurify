@@ -38,7 +38,7 @@ conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=
 After preparing the environment, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
-pip install Deepurify==2.3.8
+pip install Deepurify==2.3.9
 ```
 This installation will run for around 10 minutes.
 

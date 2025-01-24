@@ -4,13 +4,14 @@ import sys
 from typing import Dict, List, Tuple
 
 import numpy as np
+
 from Deepurify.Utils.HmmUtils import (HmmerHitDOM, addHit,
                                       identifyAdjacentMarkerGenes)
 
 
 def readFile(file_path: str) -> Tuple[str, str]:
     data = None
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             data = line.strip("\n").split("\t")
     return data[0], data[1]
@@ -18,7 +19,7 @@ def readFile(file_path: str) -> Tuple[str, str]:
 
 def readVocabulary(path: str) -> Dict:
     vocabulary = {}
-    with open(path, mode="r") as rh:
+    with open(path, mode="r", encoding="utf-8") as rh:
         for line in rh:
             oneLine = line.strip("\n").split("\t")
             vocabulary[oneLine[0]] = int(oneLine[1])
@@ -44,7 +45,7 @@ def readFasta(path: str) -> Dict[str, str]:
     contig2Seq = {}
     curContig = ""
     curSeq = ""
-    with open(path, mode="r") as rh:
+    with open(path, mode="r", encoding="utf-8") as rh:
         for line in rh:
             curLine = line.strip("\n")
             if curLine[0] == ">":
@@ -62,7 +63,7 @@ def readFasta(path: str) -> Dict[str, str]:
 
 def readBinName2Annot(binName2LineagePath: str) -> Dict[str, str]:
     res = {}
-    with open(binName2LineagePath, "r") as rh:
+    with open(binName2LineagePath, "r", encoding="utf-8") as rh:
         for line in rh:
             info = line.strip("\n").split("\t")
             name, suffix = os.path.splitext(info[0])
@@ -75,7 +76,7 @@ def readCheckm2Res(file_path: str):
     h = 0
     m = 0
     l = 0
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             if "Name" not in line:
                 info = line.strip("\n").split("\t")
@@ -95,7 +96,7 @@ def readCheckm2Res(file_path: str):
 
 
 def readDiamond(file_path: str, res: Dict):
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             thisline = line.strip("\n").split("\t")
             bin_name, contig_name = thisline[0].split("Ω")
@@ -118,7 +119,7 @@ def readPickle(readPath: str) -> object:
 def readTXT(path: str) -> Dict:
     name2seq = {}
     k = 0
-    with open(path, "r") as rh:
+    with open(path, "r", encoding="utf-8") as rh:
         for line in rh:
             oneLine = line.strip("\n")
             name2seq[k] = oneLine
@@ -129,7 +130,7 @@ def readTXT(path: str) -> Dict:
 def readAnnotResult(testBinPath: str) -> Tuple[Dict[str, str], Dict[str, List[float]]]:
     name2annote = {}
     name2probsList = {}
-    with open(testBinPath, "r") as rh:
+    with open(testBinPath, "r", encoding="utf-8") as rh:
         for line in rh:
             info = line.strip("\n").split("\t")
             name2annote[info[0]] = info[1]
@@ -150,7 +151,7 @@ def readCheckMResultAndStat(
         print("### Error Occured During Reading CheckM Result ###")
         print("##################################################")
         raise ValueError(f"CheckM result file {checkMPath} not found...")
-    with open(checkMPath, "r") as rh:
+    with open(checkMPath, "r", encoding="utf-8") as rh:
         for line in rh:
             if line[0] != "-" and "Marker lineage" not in line:
                 info = line.strip("\n").split(" ")
@@ -185,7 +186,7 @@ def readHMMFile(file_path: str, hmmAcc2model, accs_set: set, phy_name=None) -> T
         raise ValueError("HMM file does not exist.")
 
     markerHits = {}
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             if line[0] != "#":
                 info = line.strip("\n").split(" ")
@@ -228,7 +229,7 @@ def readHMMFileReturnDict(
     file_path: str
 ):
     contigName2hits = {}
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             if line[0] != "#":
                 info = line.strip("\n").split(" ")
@@ -260,7 +261,7 @@ def readMetaInfo(file_path: str):
     h = 0
     m = 0
     l = 0
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             info = line.strip("\n").split("\t")
             comp = float(info[1])
@@ -280,7 +281,7 @@ def readMetaInfo(file_path: str):
 
 def readCSV(file_path):
     csv = []
-    with open(file_path, "r") as rh:
+    with open(file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             oneline = line.strip("\n").split(",")
             csv.append(oneline)
@@ -289,7 +290,7 @@ def readCSV(file_path):
 
 def convertFastaToTXT(fastPath: str, txtOutputPath: str):
     contig2seq = readFasta(fastPath)
-    with open(txtOutputPath, "w") as wh:
+    with open(txtOutputPath, "w", encoding="utf-8") as wh:
         for _, val in contig2seq.items():
             wh.write(val + "\n")
 
@@ -324,7 +325,7 @@ def write_result(
 
 
 def writeAnnot2BinNames(annot2binNames: Dict[str, List[str]], outputPath: str):
-    with open(outputPath, "w") as wh:
+    with open(outputPath, "w", encoding="utf-8") as wh:
         for annot, binList in annot2binNames.items():
             for binName in binList:
                 wh.write(binName + "\t" + annot + "\n")
@@ -332,7 +333,7 @@ def writeAnnot2BinNames(annot2binNames: Dict[str, List[str]], outputPath: str):
 
 def writeFasta(name2seq: Dict, writePath: str, change_name=False):
     index = 0
-    with open(writePath, "w") as wh:
+    with open(writePath, "w", encoding="utf-8") as wh:
         for key, val in name2seq.items():
             if change_name:
                 wh.write(f">Contig_{index}_{len(val)}\n")
@@ -347,7 +348,7 @@ def writeFasta(name2seq: Dict, writePath: str, change_name=False):
 
 
 def writeAnnotResult(outputPath: str, name2annotated: Dict, name2maxList: Dict):
-    with open(outputPath, "w") as wh:
+    with open(outputPath, "w", encoding="utf-8") as wh:
         for key, val in name2annotated.items():
             wh.write(key + "\t" + val + "\t")
             for prob in name2maxList[key]:
