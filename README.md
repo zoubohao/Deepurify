@@ -22,19 +22,21 @@ Please independently install the following tools and ensure their proper functio
 
 
 ## Installation (Have Verified):
+#### 0. Please install Python 3.8.18
+
 #### 1. FIRST STEP (Create Conda Environment for Deepurify)
 Create deepurify's conda environment by using this command:
 ```
 conda env create -n deepurify -f deepurify-conda-env.yml
 ```
 
-and Please download PyTorch v2.1.0 -cu121 (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
+and Please download PyTorch v2.1.0 -cu121 (or a higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
 ```
 conda activate deepurify
 conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
 ```
 
-#### 2. SECOND STEP (Install Codes of Deepurify)
+#### 2. SECOND STEP (Install Deepurify)
 After preparing the environment, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
