@@ -12,7 +12,7 @@ Please independently install the following tools and ensure their proper functio
 1. **[Prodigal](https://github.com/hyattpd/Prodigal/wiki/installation)** v 2.6.3 (ORF/CDS-prediction)
 2. **[HMMER](http://hmmer.org/download.html)** v.3.3.2 (Detecting conserved single-copy marker genes)
 3. **[CheckM2](https://github.com/chklovski/CheckM2)** v 1.0.1 (Evaluate the quality of MAGs)
-4. **[dRep](https://github.com/MrOlm/drep)** v3.5.0 (Filter replicated MAGs)
+4. **[Galah](https://github.com/wwood/galah)** v0.4.1 (Filter replicated MAGs)
 5. **[CONCOCT](https://github.com/BinPro/CONCOCT)** v1.1.0 (Binner)
 6. **[MetaBAT2](https://bitbucket.org/berkeleylab/metabat/src/master/)** v2.15 (Binner)
 7. **[Semibin2](https://github.com/BigDataBiology/SemiBin)** v2.1.0 (Binner)
@@ -22,30 +22,39 @@ Please independently install the following tools and ensure their proper functio
 
 
 ## Installation (Have Verified):
-#### Tip. Please use Python 3.8.18 in the following conda environment.
+#### 0. Preprocessing (Install mamba in your base conda env. Much Much faster than conda !!!)
+```
+conda activate base
+conda install mamba -c conda-forge
+```
 
 #### 1. FIRST STEP (Create Conda Environment for Deepurify)
 Create deepurify's conda environment by using this command:
 ```
-conda env create -n deepurify -f deepurify-conda-env.yml
+conda create -n deepurify
+conda activate deepurify
+mamba env update --file deepurify-conda-env.yml
 ```
 
-and Please download PyTorch v2.1.0 -cu121 (or a higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
+and Please download PyTorch v2.1.0+cu*** (or higher version) from **[http://pytorch.org/](http://pytorch.org/)** if you want to use GPUs (We highly recommend to use GPUs).
+For example:
 ```
 conda activate deepurify
-conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
 ```
+Please download the pytorch version for your CUDA version.
 
-#### 2. SECOND STEP (Install Deepurify)
+#### 2. SECOND STEP (Install Codes of Deepurify)
 After preparing the environment, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
-pip install Deepurify==2.3.10
+pip install Deepurify==2.4.2
 ```
 This installation will run for around 10 minutes.
 
 ## Download Model Weight and Other Files for Running
-Download the model weight and other files (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1CIijZl2sVsDhjKQb2AabLbzYYrFYGpfI/view?usp=sharing)**.
+Download the model weight and other files (**Deepurify-DB.zip**) for running Deepurify from this **[LINK](https://drive.google.com/file/d/1TCVePKE98o1pNN2U6naILXHqX4tuea5a/view?usp=sharing)**.
+https://drive.google.com/file/d/1TCVePKE98o1pNN2U6naILXHqX4tuea5a/view?usp=sharing
 
 
 #### 1. Set Environmental Variable

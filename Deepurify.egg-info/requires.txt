@@ -1,0 +1,8 @@
+func_timeout==4.3.5
+psutil==5.9.8
+checkm2-modified==1.0.2
+numpy==1.23.5
+scipy==1.8.0
+pandas==1.4.0
+scikit-learn==0.23.2
+semibin==2.1.0

@@ -8,8 +8,7 @@ from typing import Dict, List
 
 from Deepurify.clean_func import cleanMAGs
 from Deepurify.Utils.DataUtils import insert
-
-deepurify_v = "v2.3.10"
+from Deepurify.version import deepurify_v
 
 def bulid_tree(weight_file_path: str) -> Dict:
     def split_func(oneLine: str) -> List:
@@ -65,6 +64,18 @@ def main():
         type=str)
 
     ### optional ###
+    clean_parser.add_argument(
+        "-db",
+        "--db_folder_path",
+        default=None,
+        help="""
+        The path of database folder.
+        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to 
+        point to the appropriate folder. 
+        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
+        """,
+        type=str
+    )
     clean_parser.add_argument(
         "--gpu_num",
         default=1,
@@ -156,17 +167,6 @@ def main():
         """,
     )
     clean_parser.add_argument(
-        "--db_folder_path",
-        default=None,
-        help="""
-        The path of database folder.
-        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to 
-        point to the appropriate folder. 
-        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
-        """,
-        type=str
-    )
-    clean_parser.add_argument(
         "--model_weight_path",
         default=None,
         type=str,
@@ -197,7 +197,7 @@ def main():
         required=True,
         help="The contigs fasta path.")
     re_bin_parser.add_argument(
-        "-s",
+        "-b",
         "--sorted_bam_path",
         required=True,
         help="The sorted bam path.")
@@ -208,6 +208,18 @@ def main():
         help="The folder used to output cleaned MAGs.")
 
     ### optional ###
+    re_bin_parser.add_argument(
+        "-db",
+        "--db_folder_path",
+        default=None,
+        help="""
+        The path of database folder.
+        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to 
+        point to the appropriate folder. 
+        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
+        """,
+        type=str
+    )
     re_bin_parser.add_argument(
         "--binning_mode",
         default=None,
@@ -303,17 +315,6 @@ def main():
         By default, if no path is provided (i.e., set to None), the temporary files will be stored in the parent folder of the '--input_path' location. 
         However, you have the option to specify a different folder path to store these temporary files if needed.
         """,
-    )
-    re_bin_parser.add_argument(
-        "--db_folder_path",
-        default=None,
-        help="""
-        The path of database folder.
-        By default, if no path is provided (i.e., set to None), it is expected that the environment variable 'DeepurifyInfoFiles' has been set to 
-        point to the appropriate folder. 
-        Please ensure that the 'DeepurifyInfoFiles' environment variable is correctly configured if the path is not explicitly provided.
-        """,
-        type=str
     )
     re_bin_parser.add_argument(
         "--model_weight_path",
