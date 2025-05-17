@@ -44,6 +44,8 @@ pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https
 ```
 Please download the PyTorch version for your CUDA version.
 
+**Note**: Please use conda create -n deepurify --solver=classic if you meet "CondaValueError: You have chosen a non-default solver backend (libmamba) but it was not recognized. Choose one of: classic" this error when you are creating the environment.
+
 #### 2. SECOND STEP (Install Codes of Deepurify)
 After preparing the environment, the code of Deepurify can be installed via pip simply. 
 ```
