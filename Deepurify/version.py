@@ -1,2 +1,2 @@
 
-deepurify_v = "v2.4.2"
+deepurify_v = "v2.4.3"

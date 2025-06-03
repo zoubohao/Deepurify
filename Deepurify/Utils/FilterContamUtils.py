@@ -7,7 +7,7 @@ from typing import Dict, List, Set, Tuple
 import numpy as np
 import psutil
 from func_timeout import FunctionTimedOut, func_timeout
-from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.cluster import KMeans
 
 from Deepurify.Utils.CallGenesUtils import splitListEqually
 from Deepurify.Utils.HmmUtils import getHMMModels, processHits
@@ -87,9 +87,13 @@ def cluster_kmeans(bin_cluster_num, X, cl, length_weights):
     try:
         kmeans_model = COPKMeans(bin_cluster_num)
         func_timeout(60 * 3, kmeans_model.fit, args=(X, None, [], cl,))
+    except FunctionTimedOut:
+        kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
+        kmeans_model.fit(X, None, length_weights)
+    except ValueError:
+        kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
+        kmeans_model.fit(X, None, length_weights)
     except:
-        ## In theory, it is better to use GMM or Variational Bayesian Gaussian Mixture to cluster if we know the number 
-        ## of components. But we did not do experiments for these two methods.
         kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
         kmeans_model.fit(X, None, length_weights)
     return kmeans_model
@@ -181,9 +185,13 @@ def cluster_split(
     kmeans_model = None
     try:
         kmeans_model = cluster_kmeans(bin_cluster_num, X, cl, length_weights)
+    except FunctionTimedOut:
+        kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
+        kmeans_model.fit(X, None, length_weights)
+    except ValueError:
+        kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
+        kmeans_model.fit(X, None, length_weights)
     except:
-        ## In theory, it is better to use GMM or Variational Bayesian Gaussian Mixture to cluster if we know the number 
-        ## of components. But we did not do experiments for these two methods.
         kmeans_model = KMeans(bin_cluster_num, n_init=20, max_iter=600)
         kmeans_model.fit(X, None, length_weights)
     

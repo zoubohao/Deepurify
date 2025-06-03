@@ -1,16 +1,12 @@
 import os
-import sys
-from multiprocessing import Process
 import multiprocessing as mp
 from shutil import rmtree
 from typing import Dict, List, Union
 
 import psutil
-import torch
 import time
 
-from Deepurify.Utils.BuildFilesUtils import (build_taxonomic_file,
-                                             buildAllConcatFiles,
+from Deepurify.Utils.BuildFilesUtils import (buildAllConcatAnnotFiles,
                                              buildSubFastaFile)
 from Deepurify.Utils.CallGenesUtils import callMarkerGenes
 from Deepurify.Utils.FilterContamUtils import filterContaminationFolder
@@ -18,10 +14,10 @@ from Deepurify.Utils.IOUtils import (progressBar, readFasta, write_result,
                                      writeFasta)
 from Deepurify.Utils.LabelBinsUtils import (estimateContigSimFromFile,
                                             estimateContigSimInBinsPall)
-from Deepurify.Utils.RunCMDUtils import (buildCheckm2TmpFilesParall, cal_depth,
-                                         runCheckm2Reuse, runCheckm2Single,
-                                         runCONCOCT, runMetaBAT2, runSemibin)
+from Deepurify.Utils.RunCMDUtils import (buildCheckm2TmpFilesParall,
+                                         runCheckm2Reuse, runCheckm2Single)
 from Deepurify.Utils.SelectBinsUitls import findBestBinsAfterFiltering
+from Deepurify.binning import binning
 
 
 def run_all_deconta_steps(
@@ -51,14 +47,11 @@ def run_all_deconta_steps(
     build_concat_file=False,
     concat_annot_file_path = None,
     concat_vec_file_path = None,
-    concat_TNF_vector_path = None,
-    concat_contig_file_path = None,
     simulated_MAG=False,
     just_annot=False,
-    
 ):
     mp.set_start_method("spawn", force=True)
-    if os.path.exists(outputBinFolder) is False:
+    if outputBinFolder is not None and os.path.exists(outputBinFolder) is False:
         os.mkdir(outputBinFolder)
     if os.path.exists(tempFileOutFolder) is False:
         os.mkdir(tempFileOutFolder)
@@ -85,6 +78,7 @@ def run_all_deconta_steps(
     if N == 0:
         raise ValueError("No bins in input folder.")
     if has_space:
+        print("--> In decontamination function. Start to filter the space in contig name. Make sure the first string of contig name is unique in fasta file.")
         if os.path.exists(filtered_space_output_bin_folder) is False:
             os.mkdir(filtered_space_output_bin_folder)
         for binName in binsNames:
@@ -95,20 +89,11 @@ def run_all_deconta_steps(
                     for line in rh:
                         oneline = line.strip("\n")
                         if ">" in oneline and " " in oneline:
-                            oneline = "_".join(oneline.split())
+                            oneline = oneline.split()[0]
                         wh.write(oneline + "\n")
         inputBinFolder = filtered_space_output_bin_folder
     
-    # TODO: BUG in this line.
-    # after run build_taxonomic_file function, the following codes would be locked.
-    if os.path.exists(taxoName2RepNormVecPath) is False:
-        build_taxonomic_file(
-            taxoTreePath,
-            taxoVocabPath,
-            mer3Path,
-            mer4Path, modelWeightPath,
-            taxoName2RepNormVecPath,
-            model_config)
+    assert os.path.exists(taxoName2RepNormVecPath) is not False, ValueError("taxoName2RepNormVecPath is not existed.")
     
     print("========================================================================")
     print("--> Start to Estimate Taxonomic Similarity of Contigs in the MAG...")
@@ -143,22 +128,18 @@ def run_all_deconta_steps(
     end_time = time.time()
     with open(os.path.join(tempFileOutFolder, "Annot.time"), "w") as wh:
         wh.write(str(end_time - start_time) + "\n")
-
-    if just_annot:
-        return 
     
     mp.set_start_method("fork", force=True)
     print(f"--> The method for multiprocessing is {mp.get_start_method()}")
     if build_concat_file:
-        buildAllConcatFiles(
-            inputBinFolder,
+        buildAllConcatAnnotFiles(
             annotOutputFolder,
             concat_annot_file_path,
             concat_vec_file_path,
-            concat_TNF_vector_path,
-            concat_contig_file_path,
-            bin_suffix
         )
+    
+    if just_annot:
+        return 
         
     if num_process is None:
         cpu_num = psutil.cpu_count()
@@ -206,7 +187,7 @@ def run_all_deconta_steps(
         return
     
     print("========================================================================")
-    print("--> Start to Run CheckM2...")
+    print("--> Start to Run CheckM2 First Time...")
     originalBinsCheckMfolder = os.path.join(filterOutputFolder, "original_checkm2_res")
     originalBinsCheckMPath = os.path.join(originalBinsCheckMfolder, "quality_report.tsv")
     if os.path.exists(originalBinsCheckMfolder) is False:
@@ -214,6 +195,8 @@ def run_all_deconta_steps(
     s_time = time.time()
     ### checkm2_db_path
     if os.path.exists(originalBinsCheckMPath) is False:
+        if os.path.exists(originalBinsCheckMfolder):
+            rmtree(originalBinsCheckMfolder, ignore_errors=True)
         runCheckm2Single(inputBinFolder, originalBinsCheckMfolder, bin_suffix, db_path=checkm2_db_path, num_cpu=cpu_num)
     e_time = time.time()
     with open(os.path.join(tempFileOutFolder, "Checkm2_first.time"), "w") as wh:
@@ -228,7 +211,7 @@ def run_all_deconta_steps(
         wh.write(str(e_time - s_time) + "\n")
     
     print("========================================================================")
-    print("--> Start to Run CheckM2...")
+    print("--> Start to Re-run CheckM2...")
     s_time = time.time()
     runCheckm2Reuse(filterOutputFolder, bin_suffix, checkm2_db_path)
     e_time = time.time()
@@ -272,164 +255,6 @@ def run_all_deconta_steps(
 ####################################
 ########## Application #############
 ####################################
-
-def bin_c(
-    contigs_path: str,
-    sorted_sorted_bam_file: str,
-    res_output_path,
-    depth_path,
-    num_cpu
-):
-    if depth_path is not None and os.path.exists(depth_path) is False:
-        cal_depth(sorted_sorted_bam_file, depth_path)
-    concoct_folder = os.path.join(res_output_path, "concoct")
-    if os.path.exists(concoct_folder) is False: 
-        os.mkdir(concoct_folder)
-    cur_depth_path = os.path.join(res_output_path, "cur_depth.txt")
-    first_line = ""
-    ori_depth_info = {}
-    with open(depth_path, "r") as rh:
-        i = 0
-        for line in rh:
-            if i == 0:
-                first_line = line
-            else:
-                info = line.strip("\n").split("\t")
-                ori_depth_info[info[0]] = info[1:]
-            i += 1
-    
-    with open(contigs_path, "r") as rh, open(cur_depth_path, "w") as wh:
-        wh.write(first_line)
-        for line in rh:
-            if line[0] == ">":
-                contig_name = line.strip("\n")[1:]
-                wh.write("\t".join([contig_name] + ori_depth_info[contig_name]) + "\n")
-                
-    p = Process(target=runCONCOCT, args=(contigs_path, cur_depth_path, concoct_folder, num_cpu))
-    p.start()
-    p.join()
-
-
-def bin_m(
-    contigs_path: str,
-    sorted_sorted_bam_file: str,
-    res_output_path,
-    depth_path,
-    num_cpu
-):
-    if depth_path is not None and os.path.exists(depth_path) is False:
-        cal_depth(sorted_sorted_bam_file, depth_path)
-    metabat2_folder = os.path.join(res_output_path, "metabat2")
-    if os.path.exists(metabat2_folder) is False: os.mkdir(metabat2_folder)
-    cur_depth_path = os.path.join(res_output_path, "cur_depth.txt")
-    first_line = ""
-    ori_depth_info = {}
-    with open(depth_path, "r") as rh:
-        i = 0
-        for line in rh:
-            if i == 0:
-                first_line = line
-            else:
-                info = line.strip("\n").split("\t")
-                ori_depth_info[info[0]] = info[1:]
-            i += 1
-    
-    with open(contigs_path, "r") as rh, open(cur_depth_path, "w") as wh:
-        wh.write(first_line)
-        for line in rh:
-            if line[0] == ">":
-                contig_name = line.strip("\n")[1:]
-                wh.write("\t".join([contig_name] + ori_depth_info[contig_name]) + "\n")
-    p = Process(target=runMetaBAT2, args=(contigs_path, cur_depth_path, metabat2_folder, num_cpu))
-    p.start()
-    p.join()
-
-
-def bin_c_m(
-    contigs_path: str,
-    sorted_sorted_bam_file: str,
-    res_output_path,
-    depth_path,
-    num_cpu
-):
-    if depth_path is not None and os.path.exists(depth_path) is False:
-        cal_depth(sorted_sorted_bam_file, depth_path)
-    concoct_folder = os.path.join(res_output_path, "concoct")
-    metabat2_folder = os.path.join(res_output_path, "metabat2")
-    if os.path.exists(concoct_folder) is False: os.mkdir(concoct_folder)
-    if os.path.exists(metabat2_folder) is False: os.mkdir(metabat2_folder)
-    cur_depth_path = os.path.join(res_output_path, "cur_depth.txt")
-    first_line = ""
-    ori_depth_info = {}
-    with open(depth_path, "r") as rh:
-        i = 0
-        for line in rh:
-            if i == 0:
-                first_line = line
-            else:
-                info = line.strip("\n").split("\t")
-                ori_depth_info[info[0]] = info[1:]
-            i += 1
-    
-    with open(contigs_path, "r") as rh, open(cur_depth_path, "w") as wh:
-        wh.write(first_line)
-        for line in rh:
-            if line[0] == ">":
-                contig_name = line.strip("\n")[1:]
-                contig_name = contig_name.split()[0]
-                if contig_name in ori_depth_info:
-                    wh.write("\t".join([contig_name] + ori_depth_info[contig_name]) + "\n")
-    
-    process_list = []
-    p = Process(target=runCONCOCT, args=(contigs_path, cur_depth_path, concoct_folder, num_cpu))
-    process_list.append(p)
-    p.start()
-    p = Process(target=runMetaBAT2, args=(contigs_path, cur_depth_path, metabat2_folder, num_cpu))
-    process_list.append(p)
-    p.start()
-    for p in process_list:
-        p.join()
-
-
-def binning(
-    contigs_path: str,
-    sorted_sorted_bam_file: str,
-    res_output_folder,
-    depth_path,
-    num_cpu,
-    binning_mode: str = None):
-    s_time = time.time()
-    if binning_mode is None:
-        print(f"--> binning mode is 'Ensemble'...")
-        pro_list = []
-        semibin_out = os.path.join(res_output_folder, "semibin")
-        if os.path.exists(semibin_out) is False: os.mkdir(semibin_out)
-        p = Process(target=runSemibin, args=(contigs_path, sorted_sorted_bam_file, semibin_out, num_cpu))
-        p.start()
-        pro_list.append(p)
-        p = Process(target=bin_c_m, args=(contigs_path, sorted_sorted_bam_file, res_output_folder, depth_path, num_cpu))
-        p.start()
-        pro_list.append(p)
-        for p in pro_list:
-            p.join()
-    elif binning_mode.lower() == "semibin2":
-        print(f"--> Binning mode is 'Semibin2'...")
-        semibin_out = os.path.join(res_output_folder, "semibin")
-        if os.path.exists(semibin_out) is False: os.mkdir(semibin_out)
-        p = Process(target=runSemibin, args=(contigs_path, sorted_sorted_bam_file, semibin_out, num_cpu))
-        p.start()
-        p.join()
-    elif binning_mode.lower() == "concoct":
-        print(f"--> Binning mode is 'CONCOCT'...")
-        bin_c(contigs_path, sorted_sorted_bam_file, res_output_folder, depth_path, num_cpu)
-    elif binning_mode.lower() == "metabat2":
-        print(f"--> Binning mode is 'MetaBAT2'...")
-        bin_m(contigs_path, sorted_sorted_bam_file, res_output_folder, depth_path, num_cpu)
-    else:
-        raise ValueError("Only implement CONCOCT, MetaBAT2, SemiBin2 binning tools.")
-    e_time = time.time()
-    with open(os.path.join(res_output_folder, "binning.time"), "w") as wh:
-        wh.write(str(e_time - s_time) + "\n")
 
 
 def repeat_binning_purify(
@@ -594,6 +419,8 @@ def repeat_binning_purify(
 
 def binning_purify(
     contig_fasta_path: str,
+    concat_annot_path: str,
+    concat_vec_path: str,
     all_tempFileOutFolder: str,
     cur_temp_folder: str,
     sorted_bam_file,
@@ -627,10 +454,6 @@ def binning_purify(
     re_cluster_folder = os.path.join(cur_temp_folder, f"re_cluster_-1")
     if os.path.exists(re_cluster_folder) is False:
         os.mkdir(re_cluster_folder)
-    concat_vec_path = os.path.join(all_tempFileOutFolder, "all_concat_contigname2repNorm.pkl")
-    concat_annot_path = os.path.join(all_tempFileOutFolder, "all_concat_annot.txt")
-    concat_contig_file_path = os.path.join(all_tempFileOutFolder, "all_concat_contig_seq.txt")
-    concat_TNF_vector_path = os.path.join(all_tempFileOutFolder, "all_concat_contigname2TNFNorm.pkl")
     depth_path = os.path.join(all_tempFileOutFolder, "contigs_depth.txt")
     if num_process is None:
         num_process = psutil.cpu_count()
@@ -675,13 +498,9 @@ def binning_purify(
             topK,
             model_config,
             num_process,
-            True,
+            False,
             concat_annot_path,
             concat_vec_path,
-            concat_TNF_vector_path,
-            concat_contig_file_path,
-            False,
-            False
         )
 
     sub_fasta_path = os.path.join(cur_temp_folder, f"sub_concat_fasta_-1.fasta")

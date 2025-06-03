@@ -1,13 +1,15 @@
 import os
-import sys
-from typing import Dict, List, Union
 
+from typing import List, Union
+
+from Deepurify.Infer_uitls import inference_once_time
 from Deepurify.decontamination import run_all_deconta_steps
-from Deepurify.integration import run_integration
+from Deepurify.iter_clean import run_iter_clean
 
 def cleanMAGs(
     output_bin_folder_path: str,
-    gpu_work_ratio: List[float] = [1],
+    cuda_device_list: List[float] = ["0"],
+    gpu_work_ratio_list: List[float] = [1],
     batch_size_per_gpu: int = 1,
     each_gpu_threads: int = 1,
     input_bins_folder: str = None,
@@ -26,6 +28,7 @@ def cleanMAGs(
     model_weight_path = None,
     taxo_tree_path = None,
     taxo_vocab_path = None,
+    taxo_name2rep_norm_vec_path = None
 ):
     """
     NOTE:
@@ -49,9 +52,14 @@ def cleanMAGs(
     Args:
         output_bin_folder_path (str): The output folder of purified MAGs. It will be created if it does not exist.
         
-        gpu_work_ratio (List[float], optional): The number of float elements in this list equals with the number of GPU will be used. 
-        An empty list will apply CPU to do binning or inference. For example, two GPUs will be used with different work ratio 
-        (CUDA:0 --> 0.6; CUDA:1 --> 0.4) if the input of this parameter is [0.6, 0.4]. The summed value of this list must equal with 1. Defaults to [1].
+        cuda_device_list (List[float], optional): The gpu id that you want to apply. 
+        You can set ["0", "1"] to use gpu0 and gpu1.
+        Defaults to ["0"].
+        
+        gpu_work_ratio_list (List[float], optional): The number of float elements in this list equals with the number of GPU will be used. 
+        An empty list will apply CPU to do binning or decontamination. 
+        For example, two GPUs will be used with different work ratio (CUDA:0 --> 0.6; CUDA:1 --> 0.4) if the input of this parameter is [0.6, 0.4]. 
+        The summed value of this list must equal with 1. Defaults to [1].
         
         batch_size_per_gpu (int, optional): The batch size for a GPU. Defaults to 1.
         
@@ -94,11 +102,14 @@ def cleanMAGs(
         
         db_files_path (Union[str, None], optional): The database folder path. Defaults to None.
         
-        model_weight_path (_type_, optional): The path of model weight. It should in database folder. Defaults to None.
+        model_weight_path (str, optional): The path of model weight. It should in database folder. Defaults to None.
         
-        taxo_tree_path (_type_, optional): The path of taxonomic tree. It should in database folder. Defaults to None.
+        taxo_tree_path (str, optional): The path of taxonomic tree. It should in database folder. Defaults to None.
         
-        taxo_vocab_path (_type_, optional): The path of taxonomic vocabulary. It should in database folder. Defaults to None.
+        taxo_vocab_path (str, optional): The path of taxonomic vocabulary. It should in database folder. Defaults to None.
+        
+        taxo_name2rep_norm_vec_path (str, optional): The path of taxnomic lineage with its normalized vector. 
+        It should in database folder. Defaults to None.
     """
 
     print("##################################")
@@ -107,6 +118,9 @@ def cleanMAGs(
     print()
     assert batch_size_per_gpu <= 64, "batch_size_per_gpu must smaller or equal with 64."
     assert each_gpu_threads <= 4, "each_gpu_threads must smaller or equal with 4."
+    
+    if cuda_device_list is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join(cuda_device_list)
     
     if input_bins_folder is not None:
         assert bin_suffix is not None, ValueError("The bin_suffix is None.")
@@ -120,7 +134,7 @@ def cleanMAGs(
     if os.path.exists(temp_output_folder) is False:
         os.mkdir(temp_output_folder)
 
-    gpu_num = len(gpu_work_ratio)
+    gpu_num = len(gpu_work_ratio_list)
 
     batch_size_per_gpu = [batch_size_per_gpu for _ in range(gpu_num)]
 
@@ -132,7 +146,7 @@ def cleanMAGs(
 
     assert db_files_path is not None, ValueError("The db_files_path is None. Please make sure your have set the database files properly.")
 
-    if not model_weight_path or not taxo_vocab_path or not taxo_vocab_path:
+    if not model_weight_path or not taxo_vocab_path or not taxo_vocab_path or not taxo_name2rep_norm_vec_path:
         modelWeightPath = os.path.join(db_files_path, "CheckPoint", "GTDB-clu-last.pth")
         taxoVocabPath = os.path.join(db_files_path, "Vocabs", "taxa_vocabulary.txt")
         taxoTreePath = os.path.join(db_files_path, "PyObjs", "gtdb_taxonomy_tree.pkl")
@@ -141,17 +155,53 @@ def cleanMAGs(
         modelWeightPath = model_weight_path
         taxoVocabPath = taxo_vocab_path
         taxoTreePath = taxo_tree_path
-        taxoName2RepNormVecPath = os.path.join("./taxoName2RepNormVecPath.pkl")
+        taxoName2RepNormVecPath = taxo_name2rep_norm_vec_path
     mer3Path = os.path.join(db_files_path, "Vocabs", "3Mer_vocabulary.txt")
     mer4Path = os.path.join(db_files_path, "Vocabs", "4Mer_vocabulary.txt")
     hmmModelPath = os.path.join(db_files_path, "HMM", "hmm_models.hmm")
     phy2accsPath = os.path.join(db_files_path, "HMM", "phy2accs_new.pkl")
     checkm2_db_path = os.path.join(db_files_path, 'Checkm', "checkm2_db.dmnd")
     
-    if contig_fasta_path is not None and  sorted_bam_file is not None:
-        run_integration(
+    ## fast inference 
+    concat_vec_path = os.path.join(temp_output_folder, "all_concat_contigname2repNorm.pkl")
+    concat_annot_path = os.path.join(temp_output_folder, "all_concat_annot.txt")
+    output_fasta_path = None
+    if os.path.exists(concat_vec_path) is False \
+        or os.path.exists(concat_annot_path) is False:
+        output_fasta_path = inference_once_time(
             contig_fasta_path=contig_fasta_path,
+            inputBinFolder=input_bins_folder,
+            tempFileOutFolder=temp_output_folder,
+            modelWeightPath=modelWeightPath,
+            taxoVocabPath=taxoVocabPath,
+            taxoTreePath=taxoTreePath,
+            taxoName2RepNormVecPath=taxoName2RepNormVecPath,
+            hmmModelPath=hmmModelPath,
+            phy2accsPath=phy2accsPath,
+            bin_suffix=bin_suffix,
+            mer3Path=mer3Path,
+            mer4Path=mer4Path,
+            gpus_work_ratio=gpu_work_ratio_list,
+            batch_size_per_gpu=batch_size_per_gpu,
+            each_gpu_threads=each_gpu_threads,
+            overlapping_ratio=overlapping_ratio,
+            cut_seq_length=cut_seq_length,
+            seq_length_threshold=seq_length_threshold,
+            topkORgreedy=topk_or_greedy,
+            topK=topK_num,
+            min_length_for_infer=1000,
+            num_process=num_process,
+            concat_annot_file_path=concat_annot_path,
+            concat_vec_file_path=concat_vec_path,
+        )
+    
+    ## decontamination
+    if contig_fasta_path is not None and  sorted_bam_file is not None:
+        run_iter_clean(
+            contig_fasta_path=output_fasta_path,
             sorted_bam_file=sorted_bam_file,
+            concat_vec_path=concat_vec_path,
+            concat_annot_path=concat_annot_path,
             tempFileOutFolder=temp_output_folder,
             outputBinFolder=output_bin_folder_path,
             modelWeightPath=modelWeightPath,
@@ -163,7 +213,7 @@ def cleanMAGs(
             mer3Path=mer3Path,
             mer4Path=mer4Path,
             checkm2_db_path=checkm2_db_path,
-            gpus_work_ratio=gpu_work_ratio,
+            gpus_work_ratio=gpu_work_ratio_list,
             batch_size_per_gpu=batch_size_per_gpu,
             each_gpu_threads=each_gpu_threads,
             overlapping_ratio=overlapping_ratio,
@@ -175,10 +225,6 @@ def cleanMAGs(
             binning_mode=binning_mode
         )
     else:
-        concat_vec_path = os.path.join(temp_output_folder, "all_concat_contigname2repNorm.pkl")
-        concat_annot_path = os.path.join(temp_output_folder, "all_concat_annot.txt")
-        concat_contig_file_path = os.path.join(temp_output_folder, "all_concat_contig_seq.txt")
-        concat_TNF_vector_path = os.path.join(temp_output_folder, "all_concat_contigname2TNFNorm.pkl")
         run_all_deconta_steps(
             input_bins_folder,
             temp_output_folder,
@@ -193,7 +239,7 @@ def cleanMAGs(
             mer3Path=mer3Path,
             mer4Path=mer4Path,
             checkm2_db_path=checkm2_db_path,
-            gpus_work_ratio=gpu_work_ratio,
+            gpus_work_ratio=gpu_work_ratio_list,
             batch_size_per_gpu=batch_size_per_gpu,
             each_gpu_threads=each_gpu_threads,
             overlapping_ratio=overlapping_ratio,
@@ -202,11 +248,9 @@ def cleanMAGs(
             topkORgreedy=topk_or_greedy,
             topK=topK_num,
             num_process=num_process,
-            build_concat_file=True,
+            build_concat_file=False,
             concat_vec_file_path=concat_vec_path,
             concat_annot_file_path=concat_annot_path,
-            concat_TNF_vector_path=concat_TNF_vector_path,
-            concat_contig_file_path=concat_contig_file_path,
             simulated_MAG=False,
             just_annot=False
         )

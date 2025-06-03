@@ -9,9 +9,11 @@ from Deepurify.Utils.BuildFilesUtils import (collect_all_deconta_results,
 from Deepurify.Utils.RunCMDUtils import runGalah
 
 
-def run_integration(
+def run_iter_clean(
     contig_fasta_path: str,
     sorted_bam_file,
+    concat_vec_path,
+    concat_annot_path,
     tempFileOutFolder: str,
     outputBinFolder: str,
     modelWeightPath: str,
@@ -44,15 +46,17 @@ def run_integration(
             if " " in line:
                 signal = True
             break
-    if signal:
+    output_fasta_path = os.path.join(tempFileOutFolder, "filtered_space_in_name.contigs.fasta")
+    if signal and os.path.exists(output_fasta_path) is False:
         print("========================================================================")
         print("--> !!! WARNING !!! Find space in the contig name. Make sure the first string of contig name is unique in fasta file.")
-        output_fasta_path = os.path.join(tempFileOutFolder, "filtered_space_in_name.contigs.fasta")
         filterSpaceInFastaFile(contig_fasta_path, output_fasta_path)
         contig_fasta_path = output_fasta_path
-    
+
     binning_purify(
         contig_fasta_path,
+        concat_annot_path,
+        concat_vec_path,
         tempFileOutFolder,
         de_temp_folder,
         sorted_bam_file,
@@ -94,16 +98,4 @@ def run_integration(
     if os.path.exists(outputBinFolder) is False:
         os.makedirs(outputBinFolder)
     process_galah_result(derep_g_folder, galah_tsv, outputBinFolder)
-    
-    # runDeRep(derep_out, derep_g_folder, 64)
-    # derep_csv = os.path.join(derep_out, "data_tables", "Cdb.csv")
-    # # res_out_path = os.path.join(tempFileOutFolder, "RESULT")
-    # if os.path.exists(outputBinFolder) is False:
-    #     os.makedirs(outputBinFolder)
-    # process_drep_result(
-    #     derep_g_folder,
-    #     derep_csv,
-    #     outputBinFolder # outputBinFolder
-    # )
-    
     

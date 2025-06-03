@@ -42,13 +42,13 @@ For example:
 conda activate deepurify
 pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
 ```
-Please download the PyTorch version for your CUDA version.
+Please download the right PyTorch version for your CUDA version.
 
 #### 2. SECOND STEP (Install Codes of Deepurify)
 After preparing the environment, the code of Deepurify can be installed via pip simply. 
 ```
 conda activate deepurify
-pip install Deepurify==2.4.2
+pip install Deepurify==2.4.3
 ```
 This installation will run for around 10 minutes.
 
@@ -81,17 +81,18 @@ source .bashrc
 
 <div align=center> <img src="/clean.png" alt="clean mode"></div>
 
+### Use GPU1 and GPU2: (The GPU ids are 0, 1, 2, 3 if you have four GPUs in your system)
 ```
-deepurify clean  -i ./input_folder/ -o ./output_folder/ -db /path/of/this/Deepurify-DB/ --bin_suffix fasta --gpu_num 1 --each_gpu_threads 1
+deepurify clean  -i ./input_folder/ -o ./output_folder/ -db /path/of/this/Deepurify-DB/ --bin_suffix fasta --gpu_num 2 --cuda_device_list 1 2
 ```
 ----------------------------------------------------------------------------------------------------------------------------------------
 ```
-Deepurify version: *** v2.4.2 ***
-usage: deepurify clean [-h] -i INPUT_PATH -o OUTPUT_PATH --bin_suffix BIN_SUFFIX [-db DB_FOLDER_PATH] [--gpu_num GPU_NUM]
-                     [--batch_size_per_gpu BATCH_SIZE_PER_GPU] [--each_gpu_threads EACH_GPU_THREADS] [--overlapping_ratio OVERLAPPING_RATIO]
-                     [--cut_seq_length CUT_SEQ_LENGTH] [--mag_length_threshold MAG_LENGTH_THRESHOLD] [--num_process NUM_PROCESS]
-                     [--topk_or_greedy_search {topk,greedy}] [--topK_num TOPK_NUM] [--temp_output_folder TEMP_OUTPUT_FOLDER]
-                     [--model_weight_path MODEL_WEIGHT_PATH] [--taxo_vocab_path TAXO_VOCAB_PATH] [--taxo_tree_path TAXO_TREE_PATH]
+Deepurify version: *** v2.4.3 ***
+usage: main.py clean [-h] -i INPUT_PATH -o OUTPUT_PATH --bin_suffix BIN_SUFFIX [-db DB_FOLDER_PATH] [--gpu_num GPU_NUM]
+                     [--cuda_device_list CUDA_DEVICE_LIST [CUDA_DEVICE_LIST ...]] [--batch_size_per_gpu BATCH_SIZE_PER_GPU]
+                     [--each_gpu_threads EACH_GPU_THREADS] [--overlapping_ratio OVERLAPPING_RATIO] [--cut_seq_length CUT_SEQ_LENGTH]
+                     [--mag_length_threshold MAG_LENGTH_THRESHOLD] [--num_process NUM_PROCESS] [--topk_or_greedy_search {topk,greedy}]
+                     [--topK_num TOPK_NUM] [--temp_output_folder TEMP_OUTPUT_FOLDER]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -102,52 +103,49 @@ optional arguments:
   --bin_suffix BIN_SUFFIX
                         The bin suffix of MAG files.
   -db DB_FOLDER_PATH, --db_folder_path DB_FOLDER_PATH
-                        The path to the database folder. By default, if no path is provided (i.e., set to None), it is expected that the environment variable
-                        'DeepurifyInfoFiles' has been set to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environment variable
-                        is correctly configured if the path is not explicitly provided.
-  --gpu_num GPU_NUM     The number of GPUs to be used can be specified. Defaults to 1. If you set it to 0, the code will utilize the CPU. However, please note
-                        that using the CPU can result in significantly slower processing speed. It is recommended to provide at least one GPU (>= GTX-1060-6GB)
-                        for accelerating the speed.
+                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environment variable
+                        'DeepurifyInfoFiles' has been set to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environment
+                        variable is correctly configured if the path is not explicitly provided.
+  --gpu_num GPU_NUM     The number of GPUs to be used can be specified. Defaults to 1. If you set it to 0, the code will utilize the CPU. However, please
+                        note that using the CPU can result in significantly slower processing speed. It is recommended to provide at least one GPU (>=
+                        GTX-1060-6GB) for accelerating the speed.
+  --cuda_device_list CUDA_DEVICE_LIST [CUDA_DEVICE_LIST ...]
+                        The gpu id that you want to apply. You can set '0 1' to use gpu0 and gpu1. The code would auto apply GPUs if it is None. Default
+                        to None.
   --batch_size_per_gpu BATCH_SIZE_PER_GPU
-                        The batch size per GPU determines the number of sequences that will be loaded onto each GPU. This parameter is only applicable if the
-                        --gpu_num option is set to a value greater than 0. The default value is 4, meaning that one sequences will be loaded per GPU batch. The
-                        batch size for CPU is 4.
+                        The batch size per GPU determines the number of sequences that will be loaded onto each GPU. This parameter is only applicable if
+                        the --gpu_num option is set to a value greater than 0. The default value is 4, meaning that one sequences will be loaded per GPU
+                        batch. The batch size for CPU is 4.
   --each_gpu_threads EACH_GPU_THREADS
-                        The number of threads per GPU (or CPU) determines the parallelism level during the contigs' inference stage. If the value of gpu_num is
-                        greater than 0, each GPU will have a set number of threads to do inference. Similarly, if gpu_num is set to 0 and the code will run
-                        on CPU, the specified number of threads will be used. By default, the number of threads per GPU or CPU is set to 1. The
+                        The number of threads per GPU (or CPU) determines the parallelism level during contigs' inference stage. If the value of --gpu_num
+                        is greater than 0, each GPU will have a set number of threads to do inference. Similarly, if --gpu_num is set to 0 and the code
+                        will run on CPU, the specified number of threads will be used. By default, the number of threads per GPU or CPU is set to 1. The
                         --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per thread.
   --overlapping_ratio OVERLAPPING_RATIO
-                        The overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. By default, the
-                        overlapping ratio is set to 0.5. This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping
-                        subsequences with 0.5 overlap between consecutive subsequences.
+                        The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. By default, the
+                        overlapping ratio is set to 0.5. This means that when a contig is longer than the --cut_seq_length, it will be split into
+                        overlapping subsequences with 0.5 overlap between consecutive subsequences.
   --cut_seq_length CUT_SEQ_LENGTH
-                        The cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. The default
-                        setting is 8192, which is also the maximum length allowed during training. If a contig's length surpasses this threshold, it will be
-                        divided into smaller subsequences with lengths equal to or less than the cut_seq_length.
+                        The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. The default
+                        setting is 8192, which is also the maximum length allowed during training. If a contig's length surpasses this threshold, it will
+                        be divided into smaller subsequences with lengths equal to or less than the cut_seq_length.
   --mag_length_threshold MAG_LENGTH_THRESHOLD
-                        The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs). The
-                        default threshold is set to 200,000, which represents the total length of the contigs in base pairs (bp). MAGs with a total contig
-                        length equal to or greater than this threshold will be considered for further analysis or inclusion, while MAGs with a total contig
-                        length below the threshold may be filtered out.
+                        The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs).
+                        The default threshold is set to 200,000, which represents the total length of the contigs in base pairs (bp). MAGs with a total
+                        contig length equal to or greater than this threshold will be considered for further analysis or inclusion, while MAGs with a
+                        total contig length below the threshold may be filtered out.
   --num_process NUM_PROCESS
                         The maximum number of threads will be used. All CPUs will be used if it is None. Defaults to None
   --topk_or_greedy_search {topk,greedy}
                         Topk searching or greedy searching to label a contig. Defaults to "topk".
-  --topK_num TOPK_NUM   During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the highest cosine similarity
-                        with the contig's encoded vector. By default, the value of k is set to 3, meaning that the three most similar nodes in terms of cosine
-                        similarity will be considered for labeling the contig. Please note that this parameter does not have any effect when using the greedy
-                        search approach (topK_num=1). Defaults to 3.
+  --topK_num TOPK_NUM   During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the highest cosine
+                        similarity with the contig's encoded vector. By default, the value of k is set to 3, meaning that the three most similar nodes in
+                        terms of cosine similarity will be considered for labeling the contig. Please note that this parameter does not have any effect
+                        when using the greedy search approach (topK_num=1). Defaults to 3.
   --temp_output_folder TEMP_OUTPUT_FOLDER
-                        The temporary files generated during the process can be stored in a specified folder path. By default, if no path is provided (i.e.,
-                        set to None), the temporary files will be stored in the parent folder of the '--input_path' location. However, you have the option to
-                        specify a different folder path to store these temporary files if needed.
-  --model_weight_path MODEL_WEIGHT_PATH
-                        The path of the model weight. (In database folder) Defaults to None.
-  --taxo_vocab_path TAXO_VOCAB_PATH
-                        The path of taxon vocabulary. (In database folder) Defaults to None.
-  --taxo_tree_path TAXO_TREE_PATH
-                        The path of the taxonomic tree. (In database folder) Defaults to None.
+                        The temporary files generated during the process can be stored in a specified folder path. By default, if no path is provided
+                        (i.e., set to None), the temporary files will be stored in the parent folder of the '--input_path' location. However, you have the
+                        option to specify a different folder path to store these temporary files if needed.
 ```
 Please run 'deepurify clean -h' for more details.
 
@@ -167,7 +165,8 @@ if __name__ == "__main__":
         each_gpu_threads=1,
         input_bins_folder=input_folder,
         bin_suffix=bin_suffix,
-        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125], # enable 8 GPUs with equal work ratios.
+        cuda_device_list: List[float] = ["0", "1"], ## work at 0 and 1 gpus.
+        gpu_work_ratio_list=[0.5, 0.5], # enable 2 GPUs with equal work ratios.,
         db_files_path="./Deepurify-DB/"
     )
 
@@ -179,76 +178,74 @@ if __name__ == "__main__":
 
 <div align=center> <img src="/iter-clean.png" alt="re-bin mode"></div>
 
+### Use GPU1 and GPU2: (The GPU ids are 0, 1, 2, 3 if you have four GPUs in your system)
 ```
-deepurify iter-clean  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam -db /path/of/this/Deepurify-DB/ --gpu_num 1 --each_gpu_threads 1
+deepurify iter-clean  -c ./contigs.fasta -o ./output_folder/ -s ./sorted.bam -db /path/of/this/Deepurify-DB/ --gpu_num 2 --cuda_device_list 1 2
 ```
 ----------------------------------------------------------------------------------------------------------------------------------------
 ```
-Deepurify version: *** v2.4.2 ***
-usage: deepurify iter-clean [-h] -c CONTIGS_PATH -b SORTED_BAM_PATH -o OUTPUT_PATH [-db DB_FOLDER_PATH] [--binning_mode BINNING_MODE] [--gpu_num GPU_NUM]
-                          [--batch_size_per_gpu BATCH_SIZE_PER_GPU] [--each_gpu_threads EACH_GPU_THREADS] [--overlapping_ratio OVERLAPPING_RATIO]
-                          [--cut_seq_length CUT_SEQ_LENGTH] [--mag_length_threshold MAG_LENGTH_THRESHOLD] [--num_process NUM_PROCESS]
-                          [--topk_or_greedy_search {topk,greedy}] [--topK_num TOPK_NUM] [--temp_output_folder TEMP_OUTPUT_FOLDER]
-                          [--model_weight_path MODEL_WEIGHT_PATH] [--taxo_vocab_path TAXO_VOCAB_PATH] [--taxo_tree_path TAXO_TREE_PATH]
+Deepurify version: *** v2.4.3 ***
+usage: main.py iter-clean [-h] -c CONTIGS_PATH -b SORTED_BAM_PATH -o OUTPUT_PATH [-db DB_FOLDER_PATH] [--binning_mode BINNING_MODE] [--gpu_num GPU_NUM]
+                          [--cuda_device_list CUDA_DEVICE_LIST [CUDA_DEVICE_LIST ...]] [--batch_size_per_gpu BATCH_SIZE_PER_GPU]
+                          [--each_gpu_threads EACH_GPU_THREADS] [--overlapping_ratio OVERLAPPING_RATIO] [--cut_seq_length CUT_SEQ_LENGTH]
+                          [--mag_length_threshold MAG_LENGTH_THRESHOLD] [--num_process NUM_PROCESS] [--topk_or_greedy_search {topk,greedy}]
+                          [--topK_num TOPK_NUM] [--temp_output_folder TEMP_OUTPUT_FOLDER]
 
 optional arguments:
   -h, --help            show this help message and exit
   -c CONTIGS_PATH, --contigs_path CONTIGS_PATH
                         The contigs fasta path.
   -b SORTED_BAM_PATH, --sorted_bam_path SORTED_BAM_PATH
-                        The sorted BAM path.
+                        The sorted bam path.
   -o OUTPUT_PATH, --output_path OUTPUT_PATH
                         The folder used to output cleaned MAGs.
   -db DB_FOLDER_PATH, --db_folder_path DB_FOLDER_PATH
-                        The path to the database folder. By default, if no path is provided (i.e., set to None), it is expected that the environment variable
-                        'DeepurifyInfoFiles' has been set to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environment variable
-                        is correctly configured if the path is not explicitly provided.
+                        The path of database folder. By default, if no path is provided (i.e., set to None), it is expected that the environment variable
+                        'DeepurifyInfoFiles' has been set to point to the appropriate folder. Please ensure that the 'DeepurifyInfoFiles' environment
+                        variable is correctly configured if the path is not explicitly provided.
   --binning_mode BINNING_MODE
-                        The semibin2, concoct, metabat2 will all be run if this parameter is None. The other modes are: 'semibin2', 'concoct', and 'metabat2'.
-                        Defaults to None.
-  --gpu_num GPU_NUM     The number of GPUs to be used can be specified. Defaults to 1. If you set it to 0, the code will utilize the CPU. However, please note
-                        that using the CPU can result in significantly slower processing speed. It is recommended to provide at least one GPU (>= GTX-1060-6GB)
-                        for accelerating the speed.
+                        The semibin2, concoct, metabat2 will all be run if this parameter is None. The other modes are: 'semibin2', 'concoct', and
+                        'metabat2'. Defaults to None.
+  --gpu_num GPU_NUM     The number of GPUs to be used can be specified. Defaults to 1. If you set it to 0, the code will utilize the CPU. However, please
+                        note that using the CPU can result in significantly slower processing speed. It is recommended to provide at least one GPU (>=
+                        GTX-1060-6GB) for accelerating the speed.
+  --cuda_device_list CUDA_DEVICE_LIST [CUDA_DEVICE_LIST ...]
+                        The gpu id that you want to apply. You can set '0 1' to use gpu0 and gpu1. The code would auto apply GPUs if it is None. Default
+                        to None.
   --batch_size_per_gpu BATCH_SIZE_PER_GPU
-                        The batch size per GPU determines the number of sequences that will be loaded onto each GPU. This parameter is only applicable if the
-                        --gpu_num option is set to a value greater than 0. The default value is 4, meaning that one sequences will be loaded per GPU batch. The
-                        batch size for CPU is 4.
+                        The batch size per GPU determines the number of sequences that will be loaded onto each GPU. This parameter is only applicable if
+                        the --gpu_num option is set to a value greater than 0. The default value is 4, meaning that one sequences will be loaded per GPU
+                        batch. The batch size for CPU is 4.
   --each_gpu_threads EACH_GPU_THREADS
-                        The number of threads per GPU (or CPU) determines the parallelism level during the contigs' inference stage. If the value of gpu_num is
-                        greater than 0, each GPU will have a set number of threads to do inference. Similarly, if gpu_num is set to 0 and the code will run
-                        on CPU, the specified number of threads will be used. By default, the number of threads per GPU or CPU is set to 1. The
+                        The number of threads per GPU (or CPU) determines the parallelism level during contigs' inference stage. If the value of --gpu_num
+                        is greater than 0, each GPU will have a set number of threads to do inference. Similarly, if --gpu_num is set to 0 and the code
+                        will run on CPU, the specified number of threads will be used. By default, the number of threads per GPU or CPU is set to 1. The
                         --batch_size_per_gpu value will be divided by the number of threads to determine the batch size per thread.
   --overlapping_ratio OVERLAPPING_RATIO
-                        The overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. By default, the
-                        overlapping ratio is set to 0.5. This means that when a contig is longer than the --cut_seq_length, it will be split into overlapping
-                        subsequences with 0.5 overlap between consecutive subsequences.
+                        The --overlapping_ratio is a parameter used when the length of a contig exceeds the specified --cut_seq_length. By default, the
+                        overlapping ratio is set to 0.5. This means that when a contig is longer than the --cut_seq_length, it will be split into
+                        overlapping subsequences with 0.5 overlap between consecutive subsequences.
   --cut_seq_length CUT_SEQ_LENGTH
-                        The cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. The default
-                        setting is 8192, which is also the maximum length allowed during training. If a contig's length surpasses this threshold, it will be
-                        divided into smaller subsequences with lengths equal to or less than the cut_seq_length.
+                        The --cut_seq_length parameter determines the length at which a contig will be cut if its length exceeds this value. The default
+                        setting is 8192, which is also the maximum length allowed during training. If a contig's length surpasses this threshold, it will
+                        be divided into smaller subsequences with lengths equal to or less than the cut_seq_length.
   --mag_length_threshold MAG_LENGTH_THRESHOLD
-                        The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs). The
-                        default threshold is set to 200,000, which represents the total length of the contigs in base pairs (bp). MAGs with a total contig
-                        length equal to or greater than this threshold will be considered for further analysis or inclusion, while MAGs with a total contig
-                        length below the threshold may be filtered out.
+                        The threshold for the total length of a MAG's contigs is used to filter generated MAGs after applying single-copy genes (SCGs).
+                        The default threshold is set to 200,000, which represents the total length of the contigs in base pairs (bp). MAGs with a total
+                        contig length equal to or greater than this threshold will be considered for further analysis or inclusion, while MAGs with a
+                        total contig length below the threshold may be filtered out.
   --num_process NUM_PROCESS
                         The maximum number of threads will be used. All CPUs will be used if it is None. Defaults to None
   --topk_or_greedy_search {topk,greedy}
                         Topk searching or greedy searching to label a contig. Defaults to "topk".
-  --topK_num TOPK_NUM   During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the highest cosine similarity
-                        with the contig's encoded vector. By default, the value of k is set to 3, meaning that the three most similar nodes in terms of cosine
-                        similarity will be considered for labeling the contig. Please note that this parameter does not have any effect when using the greedy
-                        search approach (topK_num=1). Defaults to 3.
+  --topK_num TOPK_NUM   During the top-k searching approach, the default behavior is to search for the top-k nodes that exhibit the highest cosine
+                        similarity with the contig's encoded vector. By default, the value of k is set to 3, meaning that the three most similar nodes in
+                        terms of cosine similarity will be considered for labeling the contig. Please note that this parameter does not have any effect
+                        when using the greedy search approach (topK_num=1). Defaults to 3.
   --temp_output_folder TEMP_OUTPUT_FOLDER
-                        The temporary files generated during the process can be stored in a specified folder path. By default, if no path is provided (i.e.,
-                        set to None), the temporary files will be stored in the parent folder of the '-- input_path' location. However, you have the option to
-                        specify a different folder path to store these temporary files if needed.
-  --model_weight_path MODEL_WEIGHT_PATH
-                        The path of the model weight. (In database folder) Defaults to None.
-  --taxo_vocab_path TAXO_VOCAB_PATH
-                        The path of taxon vocabulary. (In database folder) Defaults to None.
-  --taxo_tree_path TAXO_TREE_PATH
-                        The path of the taxonomic tree. (In database folder) Defaults to None.
+                        The temporary files generated during the process can be stored in a specified folder path. By default, if no path is provided
+                        (i.e., set to None), the temporary files will be stored in the parent folder of the '--input_path' location. However, you have the
+                        option to specify a different folder path to store these temporary files if needed.
 ```
 Please run 'deepurify iter-clean -h' for more details.
 
@@ -268,7 +265,8 @@ if __name__ == "__main__":
         each_gpu_threads=1,
         contig_fasta_path=contig_fasta_path,
         sorted_bam_file=bam_file_path,
-        gpu_work_ratio=[0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.25], # enable 7 GPUs with different work ratios.
+        cuda_device_list: List[float] = ["0", "1"], ## work at 0 and 1 gpus.
+        gpu_work_ratio_list=[0.5, 0.5], # enable 2 GPUs with equal work ratios.,
         db_files_path="./Deepurify-DB/"
     )
 

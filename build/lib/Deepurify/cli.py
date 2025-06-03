@@ -86,6 +86,13 @@ def main():
         type=int
     )
     clean_parser.add_argument(
+        "--cuda_device_list",
+        default=None,
+        type=str,
+        nargs="+",
+        help=" The gpu id that you want to apply. " + \
+            "You can set '0 1' to use gpu0 and gpu1. The code would auto apply GPUs if it is None. Default to None.")
+    clean_parser.add_argument(
         "--batch_size_per_gpu",
         default=4,
         help="""The batch size per GPU determines the number of sequences that will be loaded onto each GPU. 
@@ -165,23 +172,6 @@ def main():
         By default, if no path is provided (i.e., set to None), the temporary files will be stored in the parent folder of the '--input_path' location. 
         However, you have the option to specify a different folder path to store these temporary files if needed.
         """,
-    )
-    clean_parser.add_argument(
-        "--model_weight_path",
-        default=None,
-        type=str,
-        help="The path of model weight. (In database folder) Defaults to None.")
-    clean_parser.add_argument(
-        "--taxo_vocab_path",
-        default=None,
-        type=str,
-        help="The path of taxon vocabulary. (In database folder) Defaults to None.",
-    )
-    clean_parser.add_argument(
-        "--taxo_tree_path",
-        default=None,
-        type=str,
-        help="The path of taxonomic tree. (In database folder) Defaults to None.",
     )
 
     ######################
@@ -236,6 +226,13 @@ def main():
         type=int
     )
     re_bin_parser.add_argument(
+        "--cuda_device_list",
+        default=None,
+        type=str,
+        nargs="+",
+        help=" The gpu id that you want to apply. " + \
+            "You can set '0 1' to use gpu0 and gpu1. The code would auto apply GPUs if it is None. Default to None.")
+    re_bin_parser.add_argument(
         "--batch_size_per_gpu",
         default=4,
         help="""The batch size per GPU determines the number of sequences that will be loaded onto each GPU. 
@@ -316,23 +313,6 @@ def main():
         However, you have the option to specify a different folder path to store these temporary files if needed.
         """,
     )
-    re_bin_parser.add_argument(
-        "--model_weight_path",
-        default=None,
-        type=str,
-        help="The path of model weight. (In database folder) Defaults to None.")
-    re_bin_parser.add_argument(
-        "--taxo_vocab_path",
-        default=None,
-        type=str,
-        help="The path of taxon vocabulary. (In database folder) Defaults to None.",
-    )
-    re_bin_parser.add_argument(
-        "--taxo_tree_path",
-        default=None,
-        type=str,
-        help="The path of taxonomic tree. (In database folder) Defaults to None.",
-    )
 
     ### main part ###
     args = myparser.parse_args()
@@ -346,7 +326,8 @@ def main():
             gpu_work_ratio.append(1. - sum(gpu_work_ratio))
         cleanMAGs(
             output_bin_folder_path=args.output_path,
-            gpu_work_ratio=gpu_work_ratio,
+            cuda_device_list=args.cuda_device_list,
+            gpu_work_ratio_list=gpu_work_ratio,
             batch_size_per_gpu=args.batch_size_per_gpu,
             each_gpu_threads=args.each_gpu_threads,
             input_bins_folder=args.input_path,
@@ -362,9 +343,6 @@ def main():
             num_process=args.num_process,
             temp_output_folder=args.temp_output_folder,
             db_files_path=args.db_folder_path,
-            model_weight_path=args.model_weight_path,
-            taxo_tree_path=args.taxo_tree_path,
-            taxo_vocab_path=args.taxo_vocab_path,
         )
     elif args.command == "iter-clean":
         gpu_num_int = int(args.gpu_num)
@@ -376,7 +354,8 @@ def main():
             gpu_work_ratio.append(1. - sum(gpu_work_ratio))
         cleanMAGs(
             output_bin_folder_path=args.output_path,
-            gpu_work_ratio=gpu_work_ratio,
+            cuda_device_list=args.cuda_device_list,
+            gpu_work_ratio_list=gpu_work_ratio,
             batch_size_per_gpu=args.batch_size_per_gpu,
             each_gpu_threads=args.each_gpu_threads,
             input_bins_folder=None,
@@ -391,10 +370,7 @@ def main():
             topK_num=args.topK_num,
             num_process=args.num_process,
             temp_output_folder=args.temp_output_folder,
-            db_files_path=args.db_folder_path,
-            model_weight_path=args.model_weight_path,
-            taxo_tree_path=args.taxo_tree_path,
-            taxo_vocab_path=args.taxo_vocab_path,
+            db_files_path=args.db_folder_path
         )
     else:
         print("#################################")

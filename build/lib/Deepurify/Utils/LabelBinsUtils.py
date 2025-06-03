@@ -881,7 +881,8 @@ def labelBinsFolder(
             drop_connect_ratio=0.0,
             dropout=0.0,
         )
-        model.to(device)
+        model = model.share_memory()
+        model = model.to(device)
         ########### IMPORT ##########
         state = torch.load(modelWeightPath, map_location=torch.device(device))
         model.load_state_dict(state, strict=True)
@@ -1059,7 +1060,7 @@ def estimateContigSimFromFile(
     bin_suffix = "fasta"
 ):
     contigname2info  = {}
-    with open(concat_annot_file_path, "r") as rh:
+    with open(concat_annot_file_path, "r", encoding="utf-8") as rh:
         for line in rh:
             info = line.strip("\n").split("\t")
             contigname2info[info[0]] = line

@@ -1,11 +1,13 @@
 LICENSE
 README.md
 setup.py
+Deepurify/Infer_uitls.py
 Deepurify/__init__.py
+Deepurify/binning.py
 Deepurify/clean_func.py
 Deepurify/cli.py
 Deepurify/decontamination.py
-Deepurify/integration.py
+Deepurify/iter_clean.py
 Deepurify/version.py
 Deepurify.egg-info/PKG-INFO
 Deepurify.egg-info/SOURCES.txt

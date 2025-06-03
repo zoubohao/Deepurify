@@ -1,6 +1,7 @@
 
 import os
 from itertools import product
+from random import seed, shuffle
 from shutil import copy
 
 import numpy as np
@@ -43,16 +44,12 @@ def get_normlized_vec(seq: str):
 
 
 
-def buildAllConcatFiles(
-    input_bins_folder: str,
+def buildAllConcatAnnotFiles(
     tmp_annot_folder: str,
     concat_annot_path: str,
     concat_vectors_path: str,
-    concat_TNF_vector_path: str,
-    concat_contig_path: str,
-    bin_suffix: str
 ):
-    with open(concat_annot_path, "w") as wh:
+    with open(concat_annot_path, "w", encoding="utf-8") as wh:
         for file in os.listdir(tmp_annot_folder):
             pro, suffix = os.path.splitext(file)
             if suffix[1:] == "txt":
@@ -68,22 +65,61 @@ def buildAllConcatFiles(
             contigName2repNormVec.update(readPickle(os.path.join(tmp_annot_folder, file)))
     writePickle(concat_vectors_path, contigName2repNormVec)
     
+    # contigName2seq = {}
+    # for file in os.listdir(input_bins_folder):
+    #     _, suffix = os.path.splitext(file)
+    #     if suffix[1:] == bin_suffix:
+    #         cur_contigname2seq = readFasta(os.path.join(input_bins_folder, file))
+    #         contigName2seq.update(cur_contigname2seq)
+    # writeFasta(contigName2seq, concat_contig_path)
+    
+    # contigName2TNFV = {}
+    # i = 1
+    # n = len(contigName2seq)
+    # for contigName, seq in contigName2seq.items():
+    #     contigName2TNFV[contigName] = get_normlized_vec(seq)
+    #     progressBar(i, n)
+    #     i += 1
+    # writePickle(concat_TNF_vector_path, contigName2TNFV)
+
+
+def build_contigname2fasta(
+    input_bins_folder,
+    bin_suffix
+):
     contigName2seq = {}
     for file in os.listdir(input_bins_folder):
         _, suffix = os.path.splitext(file)
         if suffix[1:] == bin_suffix:
             cur_contigname2seq = readFasta(os.path.join(input_bins_folder, file))
             contigName2seq.update(cur_contigname2seq)
-    writeFasta(contigName2seq, concat_contig_path)
-    
-    contigName2TNFV = {}
-    i = 1
-    n = len(contigName2seq)
-    for contigName, seq in contigName2seq.items():
-        contigName2TNFV[contigName] = get_normlized_vec(seq)
-        progressBar(i, n)
-        i += 1
-    writePickle(concat_TNF_vector_path, contigName2TNFV)
+    new_contigName2seq = {}
+    for name, seq in contigName2seq.items():
+        if " " in name:
+            name = name.split()[0]
+        new_contigName2seq[name] = seq
+    return new_contigName2seq
+
+def random_split_fasta(
+    contigname2seq,
+    random_split_contigs_folder,
+):
+    index = 0
+    temp_contigs = {}
+    contignames_list = list(sorted(list(contigname2seq.keys())))
+    seed(7)
+    shuffle(contignames_list)
+    seed(None)
+    for contigname in contignames_list:
+        temp_contigs[contigname] = contigname2seq[contigname]
+        if len(temp_contigs) >= 1000:
+            writeFasta(temp_contigs, os.path.join(random_split_contigs_folder, f"{index}.fasta"))
+            index += 1
+            temp_contigs = {}
+    if len(temp_contigs) > 0:
+        writeFasta(temp_contigs, os.path.join(random_split_contigs_folder, f"{index}.fasta"))
+        index += 1
+        temp_contigs = {}
 
 
 def filterSpaceInFastaFile(input_fasta, output_fasta):

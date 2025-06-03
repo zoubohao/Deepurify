@@ -1,5 +1,4 @@
 import numpy as np
-import scipy
 
 
 def preprocess_constraints(ml, cl, n):
@@ -135,7 +134,7 @@ class COPKMeans:
         return np.sqrt(np.sum((x - y) ** 2))
 
     def _assign_clusters(self, *args):
-        max_retries_cnt = 1000
+        max_retries_cnt = 300
 
         for retries_cnt in range(max_retries_cnt):
             try:
